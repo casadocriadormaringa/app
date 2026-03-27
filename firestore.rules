@@ -1,0 +1,366 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: pedidos
+    // Document ID: auto-generated
+    // Fields:
+    //   - codigo_cliente: string
+    //   - cliente_nome: string
+    //   - data_cobranca: string
+    //   - descricao_cobranca: string
+    //   - status_pagamento: string
+    //   - telefone_cliente: string
+    //   - valor_total: number/string
+    //   - link_de_pagamento: string
+    //   - pago_em: string
+    //   - pgtoenviado_dia: string
+    //   - pgtogerado_dia: string
+    //   - tipodepagamentopixcartao: string
+    //   - clienteCodigoConsulta: string
+    //   - createdAt: string
+    //
+    // Collection: clientes
+    // Document ID: auto-generated
+    // Fields:
+    //   - codigo: string
+    //   - nome: string
+    //   - endereco: string
+    //   - telefone: string
+    //   - proximo_banho: string
+    //   - data_vencimento: string
+    //   - valor_pacote: number
+    //   - tipo_pacote: string
+    //   - banho_e_tosa: string
+    //   - createdAt: string
+    //   - codigoConsulta: string
+    //
+    // Collection: creditos
+    // Document ID: auto-generated
+    // Fields:
+    //   - clienteId: string
+    //   - data_recebimento: string
+    //   - tipo_pagamento: string
+    //   - valor: number
+    //   - valor_restante: number
+    //   - descricao: string
+    //   - createdAt: string
+    //
+    // Collection: produtos
+    // Document ID: auto-generated
+    // Fields:
+    //   - codigo: string
+    //   - nome: string
+    //   - tipo: string (PRODUTO/SERVICO)
+    //   - unidade: string
+    //   - fornecedorId: string
+    //   - fornecedorNome: string
+    //   - codigoBarras: string
+    //   - precoCusto: number
+    //   - margemLucro: number
+    //   - precoVenda: number
+    //   - estoqueAtual: number
+    //   - estoqueCritico: number
+    //   - linkCatalogo: string
+    //   - createdAt: string
+    //
+    // Collection: fornecedores
+    // Document ID: auto-generated
+    // Fields:
+    //   - codigo: string
+    //   - nome: string
+    //   - endereco: string
+    //   - cnpj: string
+    //   - nomeVendedor: string
+    //   - contatoVendedor: string
+    //   - createdAt: string
+    //
+    // Collection: historico_banhos
+    // Document ID: auto-generated
+    // Fields:
+    //   - clienteId: string
+    //   - clienteNome: string
+    //   - clienteCodigoConsulta: string
+    //   - data: string
+    //   - status: string
+    //   - tipo_pacote: string
+    //   - valor: number
+    //   - pago: boolean
+    //   - faturado: boolean
+    //   - createdAt: string
+    //
+    // Collection: vendas
+    // Document ID: auto-generated
+    // Fields:
+    //   - numeroVenda: number
+    //   - clienteId: string
+    //   - clienteNome: string
+    //   - clienteCodigoConsulta: string
+    //   - itens: array
+    //   - valorTotal: number
+    //   - statusVenda: string
+    //   - tipoVenda: string
+    //   - clienteCodigoConsulta: string
+    //   - createdAt: string
+    //
+    // Collection: cadeado_itens
+    // Document ID: auto-generated
+    // Fields:
+    //   - dataCriacao: string
+    //   - dataExpiracao: string
+    //   - nome: string
+    //   - contato: string
+    //   - telefone: string
+    //   - valor: number
+    //   - createdAt: string
+    //
+    // Collection: config
+    // Document ID: empresa
+    // Fields:
+    //   - nomeEmpresa: string
+    //   - cnpjCpf: string (optional)
+    //   - enderecoRua: string (optional)
+    //   - enderecoNumero: string (optional)
+    //   - enderecoBairro: string (optional)
+    //   - enderecoCidade: string (optional)
+    //   - enderecoEstado: string (optional)
+    //   - enderecoCep: string (optional)
+    //   - telefoneEmpresa: string
+    //   - chavePix: string
+    //   - senhaDesbloqueio: string
+    //   - updatedAt: string
+    //
+    // Collection: agenda
+    // Document ID: auto-generated
+    // Fields:
+    //   - clienteId: string
+    //   - clienteNome: string
+    //   - petId: string (optional)
+    //   - petNome: string (optional)
+    //   - servicoId: string
+    //   - servicoNome: string
+    //   - data: string (YYYY-MM-DD)
+    //   - horario: string (HH:MM)
+    //   - valor: number
+    //   - clienteCodigoConsulta: string
+    //   - status: string
+    //   - createdAt: string
+    //
+    // Collection: todas_movimentacoes
+    // Document ID: auto-generated
+    // Fields:
+    //   - tipo: string (BANHO_PACOTE, VENDA_PDV, ENTREGA)
+    //   - data: string (ISO 8601)
+    //   - clienteId: string
+    //   - clienteNome: string
+    //   - clienteCodigoConsulta: string
+    //   - detalhes: object
+    //   - valor: number
+    //   - createdAt: string
+    //
+    // Collection: compras
+    // Document ID: auto-generated
+    // Fields:
+    //   - dataPedido: string (ISO 8601)
+    //   - dataRecebimento: string (ISO 8601, optional)
+    //   - status: string (ABERTO, RECEBIDO, CANCELADO)
+    //   - fornecedorId: string
+    //   - fornecedorNome: string
+    //   - itens: array of objects
+    //   - valorTotal: number
+    //   - createdAt: string (ISO 8601)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "casadocriadormaringa@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidPedido(data) {
+      let requiredFields = ['codigo_cliente', 'cliente_nome', 'status_pagamento'];
+      
+      return data.keys().hasAll(requiredFields) &&
+             data.codigo_cliente is string &&
+             data.cliente_nome is string &&
+             (!('cliente_id' in data) || data.cliente_id is string) &&
+             (!('clienteCodigoConsulta' in data) || data.clienteCodigoConsulta is string) &&
+             data.status_pagamento is string;
+    }
+
+    function isValidCliente(data) {
+      let requiredFields = ['codigo', 'nome', 'valor_pacote', 'tipo_pacote', 'banho_e_tosa'];
+      
+      return data.keys().hasAll(requiredFields) &&
+             data.codigo is string &&
+             data.nome is string &&
+             (!('data_vencimento' in data) || data.data_vencimento is string) &&
+             (!('codigoConsulta' in data) || data.codigoConsulta is string) &&
+             data.valor_pacote is number &&
+             data.tipo_pacote in ['Mensal', 'Quinzenal', 'Customizado'] &&
+             data.banho_e_tosa in ['Sim', 'Não'];
+    }
+
+    function isValidCredito(data) {
+      let requiredFields = ['clienteId', 'data_recebimento', 'valor', 'valor_restante'];
+      return data.keys().hasAll(requiredFields) &&
+             data.clienteId is string &&
+             data.data_recebimento is string &&
+             data.valor is number &&
+             data.valor_restante is number;
+    }
+
+    function isValidProduto(data) {
+      return (!('codigo' in data) || data.codigo is string) &&
+             (!('nome' in data) || data.nome is string) &&
+             (!('tipo' in data) || data.tipo in ['PRODUTO', 'SERVICO']) &&
+             (!('unidade' in data) || data.unidade in ['UNIDADE', 'SACO', 'GRANEL']) &&
+             (!('precoVenda' in data) || data.precoVenda is number) &&
+             (!('estoqueAtual' in data) || data.estoqueAtual is number) &&
+             (!('precoCusto' in data) || data.precoCusto is number);
+    }
+
+    function isValidFornecedor(data) {
+      return (!('codigo' in data) || data.codigo is string) &&
+             (!('nome' in data) || data.nome is string);
+    }
+
+    function isValidConfig(data) {
+      return data.nomeEmpresa is string &&
+             (!('cnpjCpf' in data) || data.cnpjCpf is string) &&
+             (!('enderecoRua' in data) || data.enderecoRua is string) &&
+             (!('enderecoNumero' in data) || data.enderecoNumero is string) &&
+             (!('enderecoBairro' in data) || data.enderecoBairro is string) &&
+             (!('enderecoCidade' in data) || data.enderecoCidade is string) &&
+             (!('enderecoEstado' in data) || data.enderecoEstado is string) &&
+             (!('enderecoCep' in data) || data.enderecoCep is string) &&
+             data.telefoneEmpresa is string &&
+             data.chavePix is string &&
+             data.senhaDesbloqueio is string;
+    }
+
+    function isValidAgenda(data) {
+      let requiredFields = ['clienteId', 'servicoId', 'data', 'horario'];
+      return data.keys().hasAll(requiredFields) &&
+             data.clienteId is string &&
+             data.servicoId is string &&
+             data.data is string &&
+             (!('clienteCodigoConsulta' in data) || data.clienteCodigoConsulta is string) &&
+             data.horario is string;
+    }
+
+    function isValidMovimentacao(data) {
+      let requiredFields = ['tipo', 'data', 'clienteNome', 'valor'];
+      return data.keys().hasAll(requiredFields) &&
+             data.tipo in ['BANHO_PACOTE', 'VENDA_PDV', 'ENTREGA'] &&
+             data.data is string &&
+             data.clienteNome is string &&
+             (!('clienteCodigoConsulta' in data) || data.clienteCodigoConsulta is string) &&
+             data.valor is number;
+    }
+
+    function isValidCompra(data) {
+      let requiredFields = ['dataPedido', 'status', 'itens', 'valorTotal'];
+      return data.keys().hasAll(requiredFields) &&
+             data.dataPedido is string &&
+             data.status in ['ABERTO', 'RECEBIDO', 'CANCELADO'] &&
+             data.itens is list &&
+             data.valorTotal is number &&
+             (!('createdAt' in data) || data.createdAt is string) &&
+             (!('dataRecebimento' in data) || data.dataRecebimento is string) &&
+             (!('fornecedorId' in data) || data.fornecedorId is string) &&
+             (!('fornecedorNome' in data) || data.fornecedorNome is string) &&
+             (!('observacoes' in data) || data.observacoes is string);
+    }
+
+    function isValidAtualizacaoDados(data) {
+      let requiredFields = ['nome', 'whatsapp', 'visualizado', 'tipo', 'createdAt'];
+      return data.keys().hasAll(requiredFields) &&
+             data.nome is string &&
+             data.whatsapp is string &&
+             data.visualizado is bool &&
+             data.tipo in ['GERAL', 'BANHO_TOSA'] &&
+             data.createdAt is string &&
+             (!('endereco' in data) || data.endereco is string) &&
+             (!('cpf' in data) || data.cpf is string) &&
+             (!('pets' in data) || data.pets is list) &&
+             (!('aceitouTermos' in data) || data.aceitouTermos is bool);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /config/{configId} {
+      allow read, write: if true;
+    }
+
+    match /agenda/{agendaId} {
+      allow read, write: if true;
+    }
+
+    match /pedidos/{pedidoId} {
+      allow read, write: if true;
+    }
+
+    match /clientes/{clienteId} {
+      allow read, write: if true;
+    }
+
+    match /creditos/{creditoId} {
+      allow read, write: if true;
+    }
+
+    match /produtos/{produtoId} {
+      allow read, write: if true;
+    }
+
+    match /fornecedores/{fornecedorId} {
+      allow read, write: if true;
+    }
+
+    match /historico_banhos/{recordId} {
+      allow read, write: if true;
+    }
+
+    match /vendas/{vendaId} {
+      allow read, write: if true;
+    }
+
+    match /todas_movimentacoes/{movId} {
+      allow read, write: if true;
+    }
+
+    match /cadeado_itens/{itemId} {
+      allow read, write: if true;
+    }
+
+    match /atualizacoes_dados/{docId} {
+      allow read, write: if true;
+    }
+
+    match /compras/{compraId} {
+      allow read, write: if true;
+    }
+
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+  }
+}

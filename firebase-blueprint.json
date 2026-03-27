@@ -1,0 +1,483 @@
+{
+  "entities": {
+    "Pedido": {
+      "title": "Pedido",
+      "description": "Representa um pedido e seu status de pagamento.",
+      "type": "object",
+      "properties": {
+        "cliente_id": {
+          "type": "string",
+          "description": "ID do cliente no Firestore."
+        },
+        "codigo_cliente": {
+          "type": "string",
+          "description": "Código identificador do cliente."
+        },
+        "cliente_nome": {
+          "type": "string",
+          "description": "Nome completo do cliente."
+        },
+        "data_cobranca": {
+          "type": "string",
+          "description": "Data da cobrança."
+        },
+        "descricao_cobranca": {
+          "type": "string",
+          "description": "Descrição da cobrança."
+        },
+        "status_pagamento": {
+          "type": "string",
+          "description": "Status atual do pagamento."
+        },
+        "telefone_cliente": {
+          "type": "string",
+          "description": "Telefone do cliente."
+        },
+        "valor_total": {
+          "type": "number",
+          "description": "Valor total da cobrança."
+        },
+        "link_de_pagamento": {
+          "type": "string",
+          "description": "Link para pagamento."
+        },
+        "pago_em": {
+          "type": "string",
+          "description": "Data em que foi pago."
+        },
+        "pgtoenviado_dia": {
+          "type": "string",
+          "description": "Data em que o pagamento foi enviado."
+        },
+        "pgtogerado_dia": {
+          "type": "string",
+          "description": "Data em que o pagamento foi gerado."
+        },
+        "tipodepagamentopixcartao": {
+          "type": "string",
+          "description": "Tipo de pagamento (Pix/Cartão)."
+        },
+        "tipo_cobranca": {
+          "type": "string",
+          "enum": ["cobranca", "pgto_antecipado"],
+          "description": "Tipo da cobrança (venda ou pagamento antecipado)."
+        },
+        "credito_processado": {
+          "type": "boolean",
+          "description": "Indica se o crédito de pagamento antecipado já foi processado."
+        },
+        "clienteCodigoConsulta": {
+          "type": "string",
+          "description": "Código de consulta do cliente."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Data de criação do registro."
+        }
+      },
+      "required": ["codigo_cliente", "cliente_nome", "status_pagamento"]
+    },
+    "Cliente": {
+      "title": "Cliente",
+      "description": "Representa um cliente e seu pacote de banhos.",
+      "type": "object",
+      "properties": {
+        "codigo": {
+          "type": "string",
+          "description": "Código identificador do cliente."
+        },
+        "nome": {
+          "type": "string",
+          "description": "Nome completo do cliente."
+        },
+        "endereco": {
+          "type": "string",
+          "description": "Endereço do cliente."
+        },
+        "telefone": {
+          "type": "string",
+          "description": "Telefone do cliente."
+        },
+        "proximo_banho": {
+          "type": "string",
+          "description": "Data do próximo banho."
+        },
+        "data_vencimento": {
+          "type": "string",
+          "description": "Data de vencimento do pacote."
+        },
+        "valor_pacote": {
+          "type": "number",
+          "description": "Valor total do pacote."
+        },
+        "tipo_pacote": {
+          "type": "string",
+          "enum": ["Mensal", "Quinzenal", "Customizado"],
+          "description": "Tipo de pacote (Mensal, Quinzenal ou Customizado)."
+        },
+        "intervalo_customizado": {
+          "type": "number",
+          "description": "Intervalo de dias para o próximo banho (usado quando tipo_pacote é Customizado)."
+        },
+        "dia_semana": {
+          "type": "string",
+          "enum": ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"],
+          "description": "Dia da semana do banho."
+        },
+        "valor_banho_avulso": {
+          "type": "number",
+          "description": "Valor calculado do banho avulso."
+        },
+        "banho_e_tosa": {
+          "type": "string",
+          "enum": ["Sim", "Não"],
+          "description": "Indica se o cliente é de pacote (banho e tosa)."
+        },
+        "pets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "nome": { "type": "string" },
+              "raca": { "type": "string" },
+              "porte": { "type": "string", "enum": ["Pequeno", "Médio", "Grande"] },
+              "observacoes": { "type": "string" },
+              "valor_pacote": { "type": "number" },
+              "tipo_pacote": { "type": "string", "enum": ["Mensal", "Quinzenal", "Customizado"] },
+              "intervalo_customizado": { "type": "number" },
+              "dia_semana": { "type": "string" },
+              "valor_banho_avulso": { "type": "number" },
+              "banho_e_tosa": { "type": "string", "enum": ["Sim", "Não"], "description": "Indica se o pet é de pacote." },
+              "proximo_banho": { "type": "string", "description": "Data do próximo banho do pet." },
+              "vacinas": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "nome": { "type": "string" },
+                    "data": { "type": "string" },
+                    "proxima_dose": { "type": "string" }
+                  }
+                }
+              },
+              "vermifugos": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "nome": { "type": "string" },
+                    "data": { "type": "string" },
+                    "proxima_dose": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "description": "Lista de pets pertencentes ao cliente."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Data de criação do registro."
+        },
+        "codigoConsulta": {
+          "type": "string",
+          "description": "Código de consulta gerado (primeiro nome + 8 caracteres aleatórios)."
+        }
+      },
+      "required": ["codigo", "nome", "valor_pacote", "tipo_pacote"]
+    },
+    "Credito": {
+      "title": "Crédito",
+      "description": "Representa um crédito lançado para um cliente.",
+      "type": "object",
+      "properties": {
+        "clienteId": {
+          "type": "string",
+          "description": "ID do cliente."
+        },
+        "data_recebimento": {
+          "type": "string",
+          "description": "Data do recebimento do crédito."
+        },
+        "tipo_pagamento": {
+          "type": "string",
+          "description": "Tipo de pagamento (Pix, Dinheiro, etc)."
+        },
+        "valor": {
+          "type": "number",
+          "description": "Valor total do crédito lançado."
+        },
+        "valor_restante": {
+          "type": "number",
+          "description": "Valor que ainda resta para ser usado."
+        },
+        "descricao": {
+          "type": "string",
+          "description": "Descrição ou observação do crédito."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Data de criação do registro."
+        }
+      },
+      "required": ["clienteId", "data_recebimento", "valor", "valor_restante"]
+    },
+    "Produto": {
+      "title": "Produto",
+      "description": "Representa um produto ou serviço.",
+      "type": "object",
+      "properties": {
+        "codigo": { "type": "string" },
+        "nome": { "type": "string" },
+        "tipo": { "type": "string", "enum": ["PRODUTO", "SERVICO"] },
+        "unidade": { "type": "string", "enum": ["UNIDADE", "SACO", "GRANEL"] },
+        "fornecedorId": { "type": "string" },
+        "fornecedorNome": { "type": "string" },
+        "codigoBarras": { "type": "string" },
+        "precoCusto": { "type": "number" },
+        "margemLucro": { "type": "number" },
+        "precoVenda": { "type": "number" },
+        "estoqueAtual": { "type": "number" },
+        "estoqueCritico": { "type": "number" },
+        "linkCatalogo": { "type": "string", "description": "Link do produto no catálogo do WhatsApp." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Fornecedor": {
+      "title": "Fornecedor",
+      "description": "Representa um fornecedor.",
+      "type": "object",
+      "properties": {
+        "codigo": { "type": "string" },
+        "nome": { "type": "string" },
+        "endereco": { "type": "string" },
+        "cnpj": { "type": "string" },
+        "nomeVendedor": { "type": "string" },
+        "contatoVendedor": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Venda": {
+      "title": "Venda",
+      "description": "Representa uma venda realizada no PDV.",
+      "type": "object",
+      "properties": {
+        "numeroVenda": { "type": "number" },
+        "clienteId": { "type": "string" },
+        "clienteNome": { "type": "string" },
+        "clienteTelefone": { "type": "string" },
+        "clienteEndereco": { "type": "string" },
+        "clienteCodigoConsulta": { "type": "string" },
+        "itens": { "type": "array" },
+        "valorTotal": { "type": "number" },
+        "valorRecebido": { "type": "number" },
+        "troco": { "type": "number" },
+        "formaPagamento": { "type": "string" },
+        "tipoVenda": { "type": "string", "enum": ["BALCAO", "ENTREGA"] },
+        "dataVencimento": { "type": "string" },
+        "dataEntrega": { "type": "string" },
+        "statusEntrega": { "type": "string", "enum": ["EM_SEPARACAO", "EM_ROTA", "ENTREGA_CONCLUIDA"] },
+        "statusVenda": { "type": "string", "enum": ["ABERTO", "FINALIZADO", "CANCELADO"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["numeroVenda", "clienteNome", "itens", "valorTotal", "statusVenda"]
+    },
+    "CadeadoItem": {
+      "title": "CadeadoItem",
+      "description": "Representa um item protegido por senha na página Cadeado.",
+      "type": "object",
+      "properties": {
+        "dataCriacao": { "type": "string", "format": "date-time" },
+        "dataExpiracao": { "type": "string" },
+        "nome": { "type": "string" },
+        "contato": { "type": "string" },
+        "telefone": { "type": "string" },
+        "valor": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["nome", "valor"]
+    },
+    "ConfigEmpresa": {
+      "title": "ConfigEmpresa",
+      "description": "Configurações gerais da empresa.",
+      "type": "object",
+      "properties": {
+        "nomeEmpresa": { "type": "string" },
+        "cnpjCpf": { "type": "string", "description": "CNPJ ou CPF da empresa." },
+        "enderecoRua": { "type": "string" },
+        "enderecoNumero": { "type": "string" },
+        "enderecoBairro": { "type": "string" },
+        "enderecoCidade": { "type": "string" },
+        "enderecoEstado": { "type": "string" },
+        "enderecoCep": { "type": "string" },
+        "telefoneEmpresa": { "type": "string" },
+        "chavePix": { "type": "string" },
+        "bancoPix": { "type": "string" },
+        "nomePix": { "type": "string" },
+        "senhaDesbloqueio": { "type": "string" },
+        "agendaConfig": {
+          "type": "object",
+          "properties": {
+            "diasDisponiveis": { "type": "array", "items": { "type": "string" } },
+            "horarioInicio": { "type": "string" },
+            "horarioFim": { "type": "string" },
+            "intervaloMinutos": { "type": "number" },
+            "permitirConflito": { "type": "boolean" }
+          }
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "AgendaItem": {
+      "title": "AgendaItem",
+      "description": "Representa um agendamento de serviço.",
+      "type": "object",
+      "properties": {
+        "clienteId": { "type": "string" },
+        "clienteNome": { "type": "string" },
+        "clienteCodigoConsulta": { "type": "string" },
+        "petId": { "type": "string" },
+        "petNome": { "type": "string" },
+        "servicoId": { "type": "string" },
+        "servicoNome": { "type": "string" },
+        "data": { "type": "string", "description": "Data do agendamento (YYYY-MM-DD)" },
+        "horario": { "type": "string", "description": "Horário do agendamento (HH:MM)" },
+        "valor": { "type": "number" },
+        "observacoes": { "type": "string" },
+        "status": { "type": "string", "enum": ["AGENDADO", "CONCLUIDO", "CANCELADO"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["clienteId", "servicoId", "data", "horario"]
+    },
+    "Movimentacao": {
+      "title": "Movimentação",
+      "description": "Representa um registro unificado de movimentação (venda, entrega, banho).",
+      "type": "object",
+      "properties": {
+        "tipo": { "type": "string", "enum": ["BANHO_PACOTE", "VENDA_PDV", "ENTREGA"] },
+        "data": { "type": "string", "format": "date-time" },
+        "clienteId": { "type": "string" },
+        "clienteNome": { "type": "string" },
+        "clienteCodigoConsulta": { "type": "string" },
+        "detalhes": { "type": "object" },
+        "valor": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tipo", "data", "clienteNome", "valor"]
+    },
+    "AtualizacaoDados": {
+      "title": "Atualização de Dados",
+      "description": "Representa uma solicitação de atualização de dados enviada pelo cliente.",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string" },
+        "endereco": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "cpf": { "type": "string" },
+        "pets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "nome": { "type": "string" },
+              "raca": { "type": "string" },
+              "idade": { "type": "string" }
+            }
+          }
+        },
+        "visualizado": { "type": "boolean", "description": "Indica se o administrador já visualizou esta atualização." },
+        "tipo": { "type": "string", "enum": ["GERAL", "BANHO_TOSA"], "description": "Origem da atualização de dados." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["nome", "whatsapp", "visualizado", "tipo", "createdAt"]
+    },
+    "Compra": {
+      "title": "Compra",
+      "description": "Representa um pedido de compra de produtos.",
+      "type": "object",
+      "properties": {
+        "dataPedido": { "type": "string", "format": "date-time" },
+        "dataRecebimento": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["ABERTO", "RECEBIDO", "CANCELADO"] },
+        "fornecedorId": { "type": "string" },
+        "fornecedorNome": { "type": "string" },
+        "itens": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "produtoId": { "type": "string" },
+              "nome": { "type": "string" },
+              "codigo": { "type": "string" },
+              "quantidadePedida": { "type": "number" },
+              "quantidadeRecebida": { "type": "number" },
+              "precoCusto": { "type": "number" },
+              "recebido": { "type": "boolean" }
+            }
+          }
+        },
+        "valorTotal": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["dataPedido", "status", "itens", "valorTotal", "createdAt"]
+    }
+  },
+  "firestore": {
+    "pedidos": {
+      "schema": "Pedido",
+      "description": "Coleção de pedidos cadastrados."
+    },
+    "clientes": {
+      "schema": "Cliente",
+      "description": "Coleção de clientes cadastrados."
+    },
+    "creditos": {
+      "schema": "Credito",
+      "description": "Coleção de créditos lançados para os clientes."
+    },
+    "historico_banhos": {
+      "schema": "object",
+      "description": "Coleção de registros de banhos e pendências financeiras no histórico."
+    },
+    "produtos": {
+      "schema": "Produto",
+      "description": "Coleção de produtos e serviços."
+    },
+    "fornecedores": {
+      "schema": "Fornecedor",
+      "description": "Coleção de fornecedores."
+    },
+    "vendas": {
+      "schema": "Venda",
+      "description": "Coleção de vendas realizadas."
+    },
+    "cadeado_itens": {
+      "schema": "CadeadoItem",
+      "description": "Coleção de itens protegidos por senha."
+    },
+    "config": {
+      "schema": "ConfigEmpresa",
+      "description": "Coleção de configurações do sistema."
+    },
+    "agenda": {
+      "schema": "AgendaItem",
+      "description": "Coleção de agendamentos de serviços."
+    },
+    "todas_movimentacoes": {
+      "schema": "Movimentacao",
+      "description": "Coleção unificada de todas as movimentações do sistema."
+    },
+    "atualizacoes_dados": {
+      "schema": "AtualizacaoDados",
+      "description": "Coleção de atualizações de dados enviadas pelos clientes."
+    },
+    "compras": {
+      "schema": "Compra",
+      "description": "Coleção de pedidos de compra de produtos."
+    }
+  }
+}
