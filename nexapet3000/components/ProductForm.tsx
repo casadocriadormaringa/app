@@ -117,15 +117,15 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 max-h-[80vh] overflow-y-auto">
           {/* Tipo de Cadastro */}
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Tipo de Cadastro</label>
-            <div className="flex gap-3">
+            <div className="flex gap-2 sm:gap-3">
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, tipo: 'PRODUTO' })}
-                className={`flex-1 py-3 rounded-xl font-bold transition-all border ${
+                className={`flex-1 py-2.5 sm:py-3 rounded-xl font-bold transition-all border text-sm sm:text-base ${
                   formData.tipo === 'PRODUTO'
                     ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100'
                     : 'bg-white border-gray-100 text-gray-500 hover:border-indigo-200'
@@ -136,7 +136,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, tipo: 'SERVICO' })}
-                className={`flex-1 py-3 rounded-xl font-bold transition-all border ${
+                className={`flex-1 py-2.5 sm:py-3 rounded-xl font-bold transition-all border text-sm sm:text-base ${
                   formData.tipo === 'SERVICO'
                     ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100'
                     : 'bg-white border-gray-100 text-gray-500 hover:border-indigo-200'
@@ -155,7 +155,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                   type="text"
                   value={formData.codigo}
                   onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
-                  className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                  className="flex-1 px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-sm sm:text-base"
                   placeholder="Ex: 10000"
                 />
                 {!product && (
@@ -176,7 +176,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 type="text"
                 value={formData.nome}
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-sm sm:text-base"
                 placeholder="Descrição do item"
               />
             </div>
@@ -188,7 +188,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               <select
                 value={formData.unidade}
                 onChange={(e) => setFormData({ ...formData, unidade: e.target.value as any })}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all bg-white"
+                className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all bg-white text-sm sm:text-base"
               >
                 <option value="UNIDADE">UNIDADE</option>
                 <option value="SACO">SACO</option>
@@ -208,7 +208,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                       setShowSupplierResults(true);
                     }}
                     onFocus={() => setShowSupplierResults(true)}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                    className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-sm sm:text-base"
                     placeholder="Buscar fornecedor..."
                   />
                   {showSupplierResults && supplierSearch && (
@@ -236,7 +236,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 <button
                   type="button"
                   onClick={onNewSupplier}
-                  className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+                  className="p-2.5 sm:p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
                   title="Novo Fornecedor"
                 >
                   <Plus size={20} />
@@ -252,7 +252,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 type="text"
                 value={formData.codigoBarras}
                 onChange={(e) => setFormData({ ...formData, codigoBarras: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-sm sm:text-base"
                 placeholder="EAN-13, etc"
               />
             </div>
@@ -263,7 +263,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 step="0.01"
                 value={isNaN(formData.precoCusto) ? '' : formData.precoCusto}
                 onChange={(e) => handleCostChange(Number(e.target.value))}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-sm sm:text-base"
                 placeholder="0.00"
               />
             </div>
@@ -277,7 +277,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 step="0.1"
                 value={isNaN(formData.margemLucro) ? '' : formData.margemLucro}
                 onChange={(e) => handleMarginChange(Number(e.target.value))}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-sm sm:text-base"
                 placeholder="0.0"
               />
             </div>
@@ -288,7 +288,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 step="0.01"
                 value={isNaN(formData.precoVenda) ? '' : formData.precoVenda}
                 onChange={(e) => handleSellingChange(Number(e.target.value))}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-sm sm:text-base"
                 placeholder="0.00"
               />
             </div>
@@ -301,7 +301,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 type="number"
                 value={isNaN(formData.estoqueAtual) ? '' : formData.estoqueAtual}
                 onChange={(e) => setFormData({ ...formData, estoqueAtual: Number(e.target.value) })}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-sm sm:text-base"
                 placeholder="0"
               />
             </div>
@@ -311,7 +311,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 type="number"
                 value={isNaN(formData.estoqueCritico) ? '' : formData.estoqueCritico}
                 onChange={(e) => setFormData({ ...formData, estoqueCritico: Number(e.target.value) })}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-sm sm:text-base"
                 placeholder="0"
               />
             </div>
@@ -323,22 +323,22 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               type="url"
               value={formData.linkCatalogo}
               onChange={(e) => setFormData({ ...formData, linkCatalogo: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+              className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-sm sm:text-base"
               placeholder="https://wa.me/p/..."
             />
           </div>
 
-          <div className="pt-4 flex gap-3">
+          <div className="pt-4 flex flex-col sm:flex-row gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-6 py-3 rounded-xl border border-gray-200 font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+              className="flex-1 px-6 py-3 rounded-xl border border-gray-200 font-semibold text-gray-600 hover:bg-gray-50 transition-colors order-2 sm:order-1"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all"
+              className="flex-1 px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all order-1 sm:order-2"
             >
               Salvar
             </button>

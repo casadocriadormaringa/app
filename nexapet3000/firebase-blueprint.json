@@ -57,6 +57,15 @@
           "type": "string",
           "description": "Tipo de pagamento (Pix/Cartão)."
         },
+        "tipo_cobranca": {
+          "type": "string",
+          "enum": ["cobranca", "pgto_antecipado"],
+          "description": "Tipo da cobrança (venda ou pagamento antecipado)."
+        },
+        "credito_processado": {
+          "type": "boolean",
+          "description": "Indica se o crédito de pagamento antecipado já foi processado."
+        },
         "clienteCodigoConsulta": {
           "type": "string",
           "description": "Código de consulta do cliente."
@@ -298,6 +307,13 @@
       "type": "object",
       "properties": {
         "nomeEmpresa": { "type": "string" },
+        "cnpjCpf": { "type": "string", "description": "CNPJ ou CPF da empresa." },
+        "enderecoRua": { "type": "string" },
+        "enderecoNumero": { "type": "string" },
+        "enderecoBairro": { "type": "string" },
+        "enderecoCidade": { "type": "string" },
+        "enderecoEstado": { "type": "string" },
+        "enderecoCep": { "type": "string" },
         "telefoneEmpresa": { "type": "string" },
         "chavePix": { "type": "string" },
         "bancoPix": { "type": "string" },
@@ -378,6 +394,62 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["nome", "whatsapp", "visualizado", "tipo", "createdAt"]
+    },
+    "Compra": {
+      "title": "Compra",
+      "description": "Representa um pedido de compra de produtos.",
+      "type": "object",
+      "properties": {
+        "dataPedido": { "type": "string", "format": "date-time" },
+        "dataRecebimento": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["ABERTO", "RECEBIDO", "CANCELADO"] },
+        "fornecedorId": { "type": "string" },
+        "fornecedorNome": { "type": "string" },
+        "itens": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "produtoId": { "type": "string" },
+              "nome": { "type": "string" },
+              "codigo": { "type": "string" },
+              "quantidadePedida": { "type": "number" },
+              "quantidadeRecebida": { "type": "number" },
+              "precoCusto": { "type": "number" },
+              "recebido": { "type": "boolean" }
+            }
+          }
+        },
+        "valorTotal": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["dataPedido", "status", "itens", "valorTotal", "createdAt"]
+    },
+    "ObservacaoCliente": {
+      "title": "Observação do Cliente",
+      "description": "Representa uma nota ou observação vinculada a um cliente.",
+      "type": "object",
+      "properties": {
+        "clienteId": {
+          "type": "string",
+          "description": "ID do cliente no Firestore."
+        },
+        "texto": {
+          "type": "string",
+          "description": "Conteúdo da observação."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["em andamento", "concluído", "não resolvi"],
+          "description": "Status atual da observação."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Data e hora de criação da nota."
+        }
+      },
+      "required": ["clienteId", "texto", "status", "createdAt"]
     }
   },
   "firestore": {
@@ -428,6 +500,14 @@
     "atualizacoes_dados": {
       "schema": "AtualizacaoDados",
       "description": "Coleção de atualizações de dados enviadas pelos clientes."
+    },
+    "compras": {
+      "schema": "Compra",
+      "description": "Coleção de pedidos de compra de produtos."
+    },
+    "observacoes_clientes": {
+      "schema": "ObservacaoCliente",
+      "description": "Coleção de notas e observações dos clientes."
     }
   }
 }

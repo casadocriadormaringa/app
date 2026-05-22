@@ -14,6 +14,8 @@ export interface OrderData {
   pgtoenviado_dia: string;
   pgtogerado_dia: string;
   tipodepagamentopixcartao: string;
+  tipo_cobranca?: 'cobranca' | 'pgto_antecipado';
+  credito_processado?: boolean;
   clienteCodigoConsulta?: string;
   createdAt?: string;
 }

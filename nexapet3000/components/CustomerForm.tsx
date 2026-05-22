@@ -1,7 +1,83 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Dog, Edit2 } from 'lucide-react';
+import { X, Plus, Trash2, Dog, Edit2, Clock, StickyNote, Loader2, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
+import { 
+  collection, 
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot, 
+  addDoc, 
+  updateDoc,
+  deleteDoc, 
+  doc,
+  Timestamp 
+} from 'firebase/firestore';
+import { db, auth } from '@/firebase';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+type NoteStatus = 'em andamento' | 'concluído' | 'não resolvi';
+
+interface Note {
+  id: string;
+  clienteId: string;
+  texto: string;
+  status: NoteStatus;
+  createdAt: any;
+}
 
 export interface Pet {
   id: string;
@@ -95,6 +171,133 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, customers,
   const [showPetForm, setShowPetForm] = useState(false);
   const [editingPetId, setEditingPetId] = useState<string | null>(null);
 
+  // Notes state
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [newNote, setNewNote] = useState('');
+  const [loadingNotes, setLoadingNotes] = useState(false);
+  const [savingNote, setSavingNote] = useState(false);
+
+  // Load notes when editing a customer
+  useEffect(() => {
+    if (!customer?.id) {
+      setNotes([]);
+      setLoadingNotes(false);
+      return;
+    }
+
+    setLoadingNotes(true);
+    
+    // Safety timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      setLoadingNotes(false);
+    }, 10000); // 10 seconds
+
+    const q = query(
+      collection(db, 'observacoes_clientes'),
+      where('clienteId', '==', customer.id)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      clearTimeout(timeoutId);
+      try {
+        const notesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Note[];
+        
+        // Sort client-side to avoid index requirement
+        notesData.sort((a, b) => {
+          const getTime = (ts: any) => {
+            if (!ts) return 0;
+            if (ts.toMillis) return ts.toMillis();
+            if (ts.seconds) return ts.seconds * 1000;
+            const d = new Date(ts);
+            return isNaN(d.getTime()) ? 0 : d.getTime();
+          };
+          return getTime(b.createdAt) - getTime(a.createdAt);
+        });
+
+        setNotes(notesData);
+        setLoadingNotes(false);
+      } catch (err) {
+        console.error("Error processing notes data:", err);
+        setLoadingNotes(false);
+      }
+    }, (error) => {
+      clearTimeout(timeoutId);
+      // Set loading to false BEFORE handling error to avoid infinite spinner
+      setLoadingNotes(false);
+      // Only throw if it's a critical error, otherwise just log
+      if (error.code === 'permission-denied') {
+        console.warn("Permission denied for notes. User might not have access.");
+      } else {
+        handleFirestoreError(error, OperationType.GET, 'observacoes_clientes');
+      }
+    });
+
+    return () => {
+      clearTimeout(timeoutId);
+      unsubscribe();
+    };
+  }, [customer?.id]);
+
+  const handleAddNote = async () => {
+    if (!newNote.trim() || !customer?.id || savingNote) return;
+
+    setSavingNote(true);
+    try {
+      await addDoc(collection(db, 'observacoes_clientes'), {
+        clienteId: customer.id,
+        texto: newNote.trim(),
+        status: 'em andamento',
+        createdAt: Timestamp.now()
+      });
+      setNewNote('');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'observacoes_clientes');
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      await deleteDoc(doc(db, 'observacoes_clientes', noteId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `observacoes_clientes/${noteId}`);
+    }
+  };
+
+  const handleUpdateNoteStatus = async (noteId: string, status: NoteStatus) => {
+    try {
+      await updateDoc(doc(db, 'observacoes_clientes', noteId), { status });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `observacoes_clientes/${noteId}`);
+    }
+  };
+
+  const formatDateShort = (timestamp: any) => {
+    if (!timestamp) return '';
+    try {
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      if (!date || isNaN(date.getTime())) return '';
+      return format(date, 'dd/MM/yyyy', { locale: ptBR });
+    } catch (e) {
+      return '';
+    }
+  };
+
+  const formatTime = (timestamp: any) => {
+    if (!timestamp) return '';
+    try {
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      if (!date || isNaN(date.getTime())) return '';
+      return format(date, 'HH:mm', { locale: ptBR });
+    } catch (e) {
+      return '';
+    }
+  };
+
   const calculateAvulso = (valor: number, tipo: 'Mensal' | 'Quinzenal' | 'Customizado') => {
     if (tipo === 'Mensal') return valor / 4;
     if (tipo === 'Quinzenal') return valor / 2;
@@ -157,7 +360,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, customers,
     } else {
       const pet: Pet = {
         ...newPet,
-        id: Math.random().toString(36).substr(2, 9),
+        id: Math.random().toString(36).substring(2, 11),
       };
       setFormData(prev => ({
         ...prev,
@@ -180,6 +383,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, customers,
       proximo_banho: '',
       vacinas: [],
       vermifugos: [],
+      status_banho: 'pendente',
     });
     setShowPetForm(false);
     setEditingPetId(null);
@@ -768,6 +972,129 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, customers,
               )}
             </div>
           </div>
+
+          {/* Notes Section - Only visible when editing */}
+          {customer?.id && (
+            <div className="pt-6 border-t border-gray-100 space-y-4">
+              <div className="flex items-center gap-2">
+                <StickyNote className="text-indigo-600" size={20} />
+                <h3 className="font-bold text-gray-900">Observações do CRM</h3>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Nova Observação</label>
+                  <textarea
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none min-h-[80px] text-sm"
+                    placeholder="Digite aqui uma nova nota para este cliente..."
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddNote}
+                  disabled={!newNote.trim() || savingNote}
+                  className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-2xl font-bold hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-lg shadow-indigo-100"
+                >
+                  {savingNote ? <Loader2 className="animate-spin" size={20} /> : <Plus size={20} />}
+                  Adicionar Nota
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Histórico de Notas</h4>
+                
+                {loadingNotes ? (
+                  <div className="flex justify-center py-6">
+                    <Loader2 className="animate-spin text-indigo-600" size={24} />
+                  </div>
+                ) : notes.length === 0 ? (
+                  <div className="text-center py-6 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                    <p className="text-gray-400 text-xs font-medium">Nenhuma observação registrada.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {notes.map((note) => (
+                      <div key={note.id} className={`border p-4 rounded-2xl shadow-sm transition-all group relative ${
+                        note.status === 'concluído' ? 'border-emerald-100 bg-emerald-50/10' : 
+                        note.status === 'não resolvi' ? 'border-red-100 bg-red-50/10' : 
+                        'border-gray-100 bg-white'
+                      }`}>
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2 text-indigo-600 font-bold text-[10px]">
+                              <Clock size={12} />
+                              <span>[{formatDateShort(note.createdAt)}]</span>
+                              <span className="text-gray-400 font-medium">{formatTime(note.createdAt)}</span>
+                            </div>
+                            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider w-fit ${
+                              note.status === 'concluído' ? 'bg-emerald-100 text-emerald-700' :
+                              note.status === 'não resolvi' ? 'bg-red-100 text-red-700' :
+                              'bg-amber-100 text-amber-700'
+                            }`}>
+                              {note.status === 'concluído' ? <CheckCircle2 size={9} /> :
+                               note.status === 'não resolvi' ? <AlertCircle size={9} /> :
+                               <Circle size={9} className="animate-pulse" />}
+                              {note.status}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteNote(note.id)}
+                            className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                        <p className={`text-gray-700 text-xs whitespace-pre-wrap leading-relaxed mb-3 ${
+                          note.status === 'concluído' ? 'line-through opacity-50' : ''
+                        }`}>
+                          {note.texto}
+                        </p>
+
+                        <div className="flex flex-wrap gap-1.5 pt-2 border-t border-gray-50">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateNoteStatus(note.id, 'em andamento')}
+                            className={`px-2 py-1 rounded-lg text-[9px] font-bold transition-all ${
+                              note.status === 'em andamento'
+                                ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                                : 'bg-gray-50 text-gray-400 border border-transparent hover:bg-gray-100'
+                            }`}
+                          >
+                            Em Andamento
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateNoteStatus(note.id, 'concluído')}
+                            className={`px-2 py-1 rounded-lg text-[9px] font-bold transition-all ${
+                              note.status === 'concluído'
+                                ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                : 'bg-gray-50 text-gray-400 border border-transparent hover:bg-gray-100'
+                            }`}
+                          >
+                            Concluído
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateNoteStatus(note.id, 'não resolvi')}
+                            className={`px-2 py-1 rounded-lg text-[9px] font-bold transition-all ${
+                              note.status === 'não resolvi'
+                                ? 'bg-red-100 text-red-700 border border-red-200'
+                                : 'bg-gray-50 text-gray-400 border border-transparent hover:bg-gray-100'
+                            }`}
+                          >
+                            Não Resolvi
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="pt-4 flex gap-3">
             <button

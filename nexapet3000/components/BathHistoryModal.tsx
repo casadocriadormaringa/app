@@ -149,7 +149,7 @@ export const BathHistoryModal: React.FC<BathHistoryModalProps> = ({ customer, on
         descricao: description
       });
 
-      router.push(`/pedidos?${params.toString()}`);
+      router.push(`/XJ92K4BT/pedidos?${params.toString()}`);
       onClose();
     } catch (err) {
       console.error('Erro ao processar cobrança:', err);

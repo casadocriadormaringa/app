@@ -1,21 +1,22 @@
-import type {Metadata} from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
-import { DeliveryAlert } from '@/components/DeliveryAlert';
-
-const inter = Inter({ subsets: ['latin'] });
+import { Metadata } from 'next';
+import { ExpirationWrapper } from '@/components/ExpirationWrapper';
+import { AppProvider } from '@/components/AppContext';
 
 export const metadata: Metadata = {
-  title: 'Gerenciador de Pedidos',
-  description: 'Sistema de gerenciamento de recebimento de pedidos',
+  title: 'Casa do Criador Maringá - POS',
+  description: 'Sistema de PDV e Gerenciamento para Pet Shop',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
-      <body className={inter.className} suppressHydrationWarning>
-        {children}
-        <DeliveryAlert />
+    <html lang="pt-BR">
+      <body>
+        <AppProvider>
+          <ExpirationWrapper>
+            {children}
+          </ExpirationWrapper>
+        </AppProvider>
       </body>
     </html>
   );

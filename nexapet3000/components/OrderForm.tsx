@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Search, User, Loader2 } from 'lucide-react';
+import { X, Search, User, Loader2, Clock, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { collection, getDocs, query, orderBy, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/firebase';
@@ -23,13 +23,20 @@ interface OrderFormProps {
 export const OrderForm: React.FC<OrderFormProps> = ({ order, onSave, onClose }) => {
   const normalizeDate = (val: any) => {
     if (!val) return '';
+    if (val instanceof Date) return val.toISOString();
     if (typeof val === 'object' && 'seconds' in val) {
       return new Date(val.seconds * 1000).toISOString();
     }
-    return String(val);
+    try {
+      const d = new Date(val);
+      return isNaN(d.getTime()) ? String(val) : d.toISOString();
+    } catch {
+      return String(val);
+    }
   };
 
   const [formData, setFormData] = useState<Omit<OrderData, 'id'>>({
+    cliente_id: order?.cliente_id || '',
     codigo_cliente: order?.codigo_cliente || '',
     cliente_nome: order?.cliente_nome || '',
     data_cobranca: normalizeDate(order?.data_cobranca),
@@ -43,6 +50,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ order, onSave, onClose }) 
     pgtoenviado_dia: normalizeDate(order?.pgtoenviado_dia),
     pgtogerado_dia: normalizeDate(order?.pgtogerado_dia) || format(new Date(), "yyyy-MM-dd'T'HH:mm:ss'Z'"),
     tipodepagamentopixcartao: order?.tipodepagamentopixcartao || 'Pix',
+    tipo_cobranca: order?.tipo_cobranca || 'cobranca',
     clienteCodigoConsulta: order?.clienteCodigoConsulta || '',
   });
 
@@ -84,7 +92,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ order, onSave, onClose }) 
       if (customer) {
         setFormData(prev => ({
           ...prev,
-          codigo_cliente: customer.codigo,
+          codigo_cliente: customer.codigo || '',
           telefone_cliente: customer.telefone || '',
           endereco_cliente: customer.endereco || '',
           clienteCodigoConsulta: customer.codigoConsulta || ''
@@ -190,6 +198,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ order, onSave, onClose }) 
   };
 
   useEffect(() => {
+    setLoadingCustomers(true);
     const q = query(collection(db, 'clientes'), orderBy('nome', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const customersData = snapshot.docs.map(doc => ({
@@ -209,19 +218,20 @@ export const OrderForm: React.FC<OrderFormProps> = ({ order, onSave, onClose }) 
   const filteredCustomers = useMemo(() => {
     if (!customerSearch.trim()) return [];
     const term = customerSearch.toLowerCase();
-    return customers.filter(c => 
-      c.nome.toLowerCase().includes(term) || 
-      c.codigo.toLowerCase().includes(term)
-    ).slice(0, 5);
+    return customers.filter(c => {
+      const nome = String(c.nome || '').toLowerCase();
+      const codigo = String(c.codigo || '').toLowerCase();
+      return nome.includes(term) || codigo.includes(term);
+    }).slice(0, 5);
   }, [customers, customerSearch]);
 
   const selectCustomer = (customer: CustomerData) => {
     setFormData({
       ...formData,
       cliente_id: customer.id,
-      codigo_cliente: customer.codigo,
-      cliente_nome: customer.nome,
-      telefone_cliente: customer.telefone,
+      codigo_cliente: customer.codigo || '',
+      cliente_nome: customer.nome || '',
+      telefone_cliente: customer.telefone || '',
       endereco_cliente: customer.endereco || '',
       clienteCodigoConsulta: customer.codigoConsulta || '',
     });
@@ -306,6 +316,33 @@ export const OrderForm: React.FC<OrderFormProps> = ({ order, onSave, onClose }) 
         </div>
         
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          <div className="grid grid-cols-2 gap-4 pb-4 border-b border-gray-50">
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, tipo_cobranca: 'cobranca' })}
+              className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${
+                formData.tipo_cobranca === 'cobranca'
+                  ? 'bg-indigo-50 border-indigo-600 text-indigo-700 shadow-inner'
+                  : 'bg-white border-gray-100 text-gray-400 hover:bg-gray-50'
+              }`}
+            >
+              <FileText size={24} />
+              <span className="text-sm font-bold uppercase tracking-wider">Cobrança</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, tipo_cobranca: 'pgto_antecipado' })}
+              className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${
+                formData.tipo_cobranca === 'pgto_antecipado'
+                  ? 'bg-amber-50 border-amber-600 text-amber-700 shadow-inner'
+                  : 'bg-white border-gray-100 text-gray-400 hover:bg-gray-50'
+              }`}
+            >
+              <Clock size={24} />
+              <span className="text-sm font-bold uppercase tracking-wider">Pgto Antecipado</span>
+            </button>
+          </div>
+
           {/* Customer Search Section */}
           {!order && (
             <div className="relative space-y-1 pb-4 border-b border-gray-50">
@@ -381,7 +418,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ order, onSave, onClose }) 
                     <div key={credit.id} className="bg-white p-4 rounded-2xl border border-emerald-100 flex items-center justify-between gap-4">
                       <div className="flex-1">
                         <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                          {credit.data_recebimento} - {credit.tipo_pagamento}
+                          {normalizeDate(credit.data_recebimento)} - {credit.tipo_pagamento}
                         </p>
                         <p className="text-sm text-gray-700 italic">{credit.descricao || 'Sem descrição'}</p>
                         <p className="text-sm font-bold text-emerald-600">Disponível: R$ {(credit.valor_restante || 0).toFixed(2)}</p>

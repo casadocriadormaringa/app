@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   collection, 
   query, 
@@ -8,11 +8,17 @@ import {
   onSnapshot, 
   doc,
   updateDoc,
-  addDoc
+  addDoc,
+  getDocs,
+  limit,
+  startAfter,
+  orderBy,
+  QueryDocumentSnapshot,
+  DocumentData
 } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { X, Loader2, CheckCircle2, Clock, Calendar, FileText, DollarSign, Check, RotateCcw, Dog, ShoppingCart, Edit2, Trash2, Printer } from 'lucide-react';
-import { format, parseISO, addWeeks } from 'date-fns';
+import { format, parseISO, addWeeks, isBefore, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CustomerData } from './CustomerForm';
 import { OrderData } from '@/types/order';
@@ -31,6 +37,7 @@ interface UnifiedItem {
   id: string;
   type: 'order' | 'bath' | 'credit';
   date: any;
+  dueDate?: string;
   description: string;
   value: number;
   status: 'pago' | 'pendente' | 'credito';
@@ -47,6 +54,11 @@ export const OrderHistoryModal: React.FC<OrderHistoryModalProps> = ({
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<UnifiedItem[]>([]);
+  const [lastOrderDoc, setLastOrderDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [lastBathDoc, setLastBathDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [lastCreditDoc, setLastCreditDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [itemToDelete, setItemToDelete] = useState<{ id: string; type: string } | null>(null);
@@ -65,33 +77,51 @@ export const OrderHistoryModal: React.FC<OrderHistoryModalProps> = ({
     return parseFloat(cleanVal) || 0;
   };
 
-  useEffect(() => {
-    setLoading(true);
-    
-    // Query orders
-    const qOrders = query(
-      collection(db, 'pedidos'),
-      where('codigo_cliente', '==', customer.codigo)
-    );
+  const fetchItems = useCallback(async (
+    isNextPage = false,
+    currentLastOrderDoc: QueryDocumentSnapshot<DocumentData> | null = null,
+    currentLastBathDoc: QueryDocumentSnapshot<DocumentData> | null = null,
+    currentLastCreditDoc: QueryDocumentSnapshot<DocumentData> | null = null
+  ) => {
+    if (isNextPage) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+      setItems([]);
+    }
 
-    // Query baths
-    const qBaths = query(
-      collection(db, 'historico_banhos'),
-      where('clienteId', '==', customer.id)
-    );
+    try {
+      const qOrders = query(
+        collection(db, 'pedidos'),
+        where('codigo_cliente', '==', customer.codigo),
+        orderBy('createdAt', 'desc'),
+        limit(10),
+        ...(isNextPage && currentLastOrderDoc ? [startAfter(currentLastOrderDoc)] : [])
+      );
 
-    // Query credits
-    const qCredits = query(
-      collection(db, 'creditos'),
-      where('clienteId', '==', customer.id)
-    );
+      const qBaths = query(
+        collection(db, 'historico_banhos'),
+        where('clienteId', '==', customer.id),
+        orderBy('data', 'desc'),
+        limit(10),
+        ...(isNextPage && currentLastBathDoc ? [startAfter(currentLastBathDoc)] : [])
+      );
 
-    let ordersData: UnifiedItem[] = [];
-    let bathsData: UnifiedItem[] = [];
-    let creditsData: UnifiedItem[] = [];
+      const qCredits = query(
+        collection(db, 'creditos'),
+        where('clienteId', '==', customer.id),
+        orderBy('createdAt', 'desc'),
+        limit(10),
+        ...(isNextPage && currentLastCreditDoc ? [startAfter(currentLastCreditDoc)] : [])
+      );
 
-    const unsubOrders = onSnapshot(qOrders, (snapshot) => {
-      ordersData = snapshot.docs.map(doc => {
+      const [ordersSnap, bathsSnap, creditsSnap] = await Promise.all([
+        getDocs(qOrders),
+        getDocs(qBaths),
+        getDocs(qCredits)
+      ]);
+
+      const newOrders: UnifiedItem[] = ordersSnap.docs.map(doc => {
         const d = doc.data();
         return {
           id: doc.id,
@@ -99,73 +129,109 @@ export const OrderHistoryModal: React.FC<OrderHistoryModalProps> = ({
           date: d.data_cobranca || d.createdAt,
           description: d.descricao_cobranca || 'Pedido sem descrição',
           value: parseCurrency(d.valor_total),
-          status: String(d.status_pagamento).toLowerCase() === 'pago' ? 'pago' : 'pendente',
+          status: String(d.status_pagamento || '').toLowerCase() === 'pago' ? 'pago' : 'pendente',
           originalData: { ...d, id: doc.id }
         };
       });
-      combineAndSet();
-    });
 
-    const unsubBaths = onSnapshot(qBaths, (snapshot) => {
-      bathsData = snapshot.docs.map(doc => {
+      const newBaths: UnifiedItem[] = bathsSnap.docs.map(doc => {
         const d = doc.data();
         const isCanceled = d.status === 'Cancelado';
-        const dateStr = d.data ? format(parseISO(d.data), 'dd/MM/yyyy') : '';
-        const desc = isCanceled 
-          ? `❌ ${dateStr} - CANCELADO: ${d.tipo_pacote || 'Normal'}${d.petNome ? ` - ${d.petNome}` : ''}`
-          : `✅ ${dateStr} - ${d.tipo_pacote || 'Normal'} OK${d.petNome ? ` - ${d.petNome}` : ''}`;
+        const isCredit = d.tipo_pacote?.toLowerCase()?.includes('crédito') || 
+                         d.tipo_pacote?.toLowerCase()?.includes('antecipado');
+        
+        let dateStr = '';
+        try {
+          dateStr = d.data ? format(parseISO(d.data), 'dd/MM/yyyy') : '';
+        } catch (e) {
+          dateStr = d.data || '';
+        }
+
+        let desc = '';
+        if (isCanceled) {
+          desc = `❌ ${dateStr} - CANCELADO: ${d.tipo_pacote || 'Normal'}${d.petNome ? ` - ${d.petNome}` : ''}`;
+        } else {
+          if (d.tipo_pacote === 'Serviço Extra') {
+            const extraName = d.servicoExtraNome || (d.descricao?.includes('Serviço Extra: ') ? d.descricao.split('Serviço Extra: ')[1].split(' para o pet')[0] : '');
+            if (extraName) {
+              desc = `✅ ${dateStr} - Serviço Extra OK (${extraName})${d.petNome ? ` - ${d.petNome}` : ''}`;
+            } else {
+              desc = `✅ ${dateStr} - ${d.tipo_pacote || 'Normal'} OK${d.petNome ? ` - ${d.petNome}` : ''}`;
+            }
+          } else {
+            desc = `✅ ${dateStr} - ${d.tipo_pacote || 'Normal'} OK${d.petNome ? ` - ${d.petNome}` : ''}`;
+          }
+        }
 
         return {
           id: doc.id,
-          type: 'bath',
+          type: isCredit ? 'credit' : 'bath',
           date: d.data,
+          dueDate: d.dataVencimento,
           description: desc,
           value: parseCurrency(d.valor),
           status: d.pago ? 'pago' : 'pendente',
           originalData: { ...d, id: doc.id }
         };
       });
-      combineAndSet();
-    });
 
-    const unsubCredits = onSnapshot(qCredits, (snapshot) => {
-      creditsData = snapshot.docs.map(doc => {
+      const newCredits: UnifiedItem[] = creditsSnap.docs.map(doc => {
         const d = doc.data();
         const valorRestante = d.valor_restante || 0;
         return {
           id: doc.id,
           type: 'credit',
-          date: d.data_recebimento,
-          description: `Crédito: ${d.descricao || 'Sem descrição'} (${d.tipo_pagamento})`,
+          date: d.data_recebimento || d.createdAt,
+          description: `Crédito: ${d.descricao || 'Sem descrição'} (${d.tipo_pagamento || 'Manual'})`,
           value: valorRestante,
-          status: valorRestante > 0 ? 'pendente' : 'pago', // pendente means still has balance
+          status: valorRestante > 0 ? 'pendente' : 'pago',
           originalData: { ...d, id: doc.id }
         };
       });
-      combineAndSet();
-    });
 
-    const combineAndSet = () => {
-      const combined = [...ordersData, ...bathsData, ...creditsData].sort((a, b) => {
-        // Sort by status (pendente first)
+      // Filter out redundant entries
+      const filteredOrders = newOrders.filter(o => 
+        !(o.originalData?.tipo_cobranca === 'pgto_antecipado' && o.status === 'pago')
+      );
+
+      const filteredBaths = newBaths.filter(b => 
+        !(b.originalData?.tipo_pacote?.toLowerCase()?.includes('pgto antecipado crédito'))
+      );
+
+      const combined = [...filteredOrders, ...filteredBaths, ...newCredits].sort((a, b) => {
         if (a.status !== b.status) {
           return a.status === 'pendente' ? -1 : 1;
         }
-        // Then by date descending
         const dateA = a.date?.seconds ? a.date.seconds * 1000 : (a.date ? new Date(a.date).getTime() : 0);
         const dateB = b.date?.seconds ? b.date.seconds * 1000 : (b.date ? new Date(b.date).getTime() : 0);
-        return (dateB || 0) - (dateA || 0);
+        const timeA = isNaN(dateA) ? 0 : dateA;
+        const timeB = isNaN(dateB) ? 0 : dateB;
+        return (timeB || 0) - (timeA || 0);
       });
-      setItems(combined);
-      setLoading(false);
-    };
 
-    return () => {
-      unsubOrders();
-      unsubBaths();
-      unsubCredits();
-    };
+      if (isNextPage) {
+        setItems(prev => [...prev, ...combined]);
+      } else {
+        setItems(combined);
+      }
+
+      setLastOrderDoc(ordersSnap.docs[ordersSnap.docs.length - 1] || null);
+      setLastBathDoc(bathsSnap.docs[bathsSnap.docs.length - 1] || null);
+      setLastCreditDoc(creditsSnap.docs[creditsSnap.docs.length - 1] || null);
+      
+      setHasMore(ordersSnap.docs.length === 10 || bathsSnap.docs.length === 10 || creditsSnap.docs.length === 10);
+
+    } catch (error) {
+      console.error('Error fetching history:', error);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
   }, [customer.codigo, customer.id]);
+
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
 
   useEffect(() => {
     const unsubConfig = onSnapshotDoc(doc(db, 'config', 'empresa'), (docSnap) => {
@@ -192,6 +258,18 @@ export const OrderHistoryModal: React.FC<OrderHistoryModalProps> = ({
           pago: item.status !== 'pago',
           dataPagamento: item.status === 'pago' ? null : new Date().toISOString()
         });
+
+        // Also update linked PDV sale if it exists
+        if (item.originalData.vendaId) {
+          try {
+            const vendaRef = doc(db, 'vendas', item.originalData.vendaId);
+            await updateDoc(vendaRef, {
+              statusPagamento: item.status === 'pago' ? 'A_RECEBER' : 'PAGO'
+            });
+          } catch (e) {
+            console.error('Error updating linked sale:', e);
+          }
+        }
       }
     } catch (err) {
       console.error('Erro ao atualizar status:', err);
@@ -206,7 +284,7 @@ export const OrderHistoryModal: React.FC<OrderHistoryModalProps> = ({
 
     const d = item.originalData;
     const dateStr = item.date ? format(new Date(item.date), 'dd/MM/yyyy HH:mm') : format(new Date(), 'dd/MM/yyyy HH:mm');
-    const companyName = companyConfig?.nomeEmpresa || 'CASA DO CRIADOR';
+    const companyName = companyConfig?.nomeEmpresa || '';
     const companyPhone = companyConfig?.telefoneEmpresa || '';
 
     let contentHtml = '';
@@ -276,6 +354,13 @@ export const OrderHistoryModal: React.FC<OrderHistoryModalProps> = ({
           <div class="label">Descrição:</div>
           <div class="value" style="font-size: 14px;">${item.description}</div>
         </div>
+
+        ${item.dueDate ? `
+        <div class="section">
+          <div class="label">Vencimento:</div>
+          <div class="value-large" style="color: ${isBefore(startOfDay(parseISO(item.dueDate)), startOfDay(new Date())) ? '#e11d48' : '#10b981'};">${formatDate(item.dueDate)}</div>
+        </div>
+        ` : ''}
 
         <div class="total-section">
           <div class="label">Valor:</div>
@@ -449,7 +534,7 @@ export const OrderHistoryModal: React.FC<OrderHistoryModalProps> = ({
       descricao: description
     });
 
-    router.push(`/pedidos?${params.toString()}`);
+    router.push(`/XJ92K4BT/pedidos?${params.toString()}`);
     onClose();
   };
 
@@ -610,6 +695,16 @@ export const OrderHistoryModal: React.FC<OrderHistoryModalProps> = ({
                             </span>
                           )}
                           <span className="text-[10px] text-gray-400 font-bold uppercase">{formatDate(item.date)}</span>
+                          {item.dueDate && (
+                            <span className={`text-[10px] font-black uppercase flex items-center gap-1 ${
+                              isBefore(startOfDay(parseISO(item.dueDate)), startOfDay(new Date())) 
+                                ? 'text-rose-600' 
+                                : 'text-emerald-600'
+                            }`}>
+                              <Clock size={10} />
+                              Venc: {formatDate(item.dueDate)}
+                            </span>
+                          )}
                         </div>
                         <p className="text-sm font-bold text-gray-800">{item.description}</p>
                       </div>
@@ -740,6 +835,25 @@ export const OrderHistoryModal: React.FC<OrderHistoryModalProps> = ({
                   </div>
                 </div>
               ))}
+
+              {hasMore && (
+                <div className="flex justify-center pt-4">
+                  <button
+                    onClick={() => fetchItems(true, lastOrderDoc, lastBathDoc, lastCreditDoc)}
+                    disabled={loadingMore}
+                    className="flex items-center gap-2 bg-white border border-gray-200 text-gray-600 px-8 py-3 rounded-2xl font-bold hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <Loader2 size={20} className="animate-spin" />
+                        Carregando...
+                      </>
+                    ) : (
+                      'Carregar Mais'
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

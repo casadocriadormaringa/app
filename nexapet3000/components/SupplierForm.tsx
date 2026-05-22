@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 
 export interface SupplierData {
@@ -31,6 +31,28 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ supplier, suppliers,
     contatoVendedor: supplier?.contatoVendedor || '',
   });
 
+  useEffect(() => {
+    if (supplier) {
+      setFormData({
+        codigo: supplier.codigo,
+        nome: supplier.nome,
+        endereco: supplier.endereco,
+        cnpj: supplier.cnpj,
+        nomeVendedor: supplier.nomeVendedor,
+        contatoVendedor: supplier.contatoVendedor,
+      });
+    } else {
+      setFormData({
+        codigo: '',
+        nome: '',
+        endereco: '',
+        cnpj: '',
+        nomeVendedor: '',
+        contatoVendedor: '',
+      });
+    }
+  }, [supplier]);
+
   const generateAutoCode = () => {
     const numericCodes = suppliers
       .map(s => parseInt(s.codigo))
@@ -60,7 +82,7 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ supplier, suppliers,
           </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 max-h-[80vh] overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Código</label>
@@ -69,7 +91,7 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ supplier, suppliers,
                   type="text"
                   value={formData.codigo}
                   onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
-                  className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                  className="flex-1 px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-sm sm:text-base"
                   placeholder="Ex: 10000"
                 />
                 {!supplier && (
@@ -90,7 +112,7 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ supplier, suppliers,
                 type="text"
                 value={formData.nome}
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-sm sm:text-base"
                 placeholder="Nome da empresa"
               />
             </div>
@@ -102,7 +124,7 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ supplier, suppliers,
               type="text"
               value={formData.endereco}
               onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+              className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-sm sm:text-base"
               placeholder="Rua, Número, Bairro, Cidade"
             />
           </div>
@@ -114,7 +136,7 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ supplier, suppliers,
                 type="text"
                 value={formData.cnpj}
                 onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-sm sm:text-base"
                 placeholder="00.000.000/0000-00"
               />
             </div>
@@ -124,7 +146,7 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ supplier, suppliers,
                 type="text"
                 value={formData.nomeVendedor}
                 onChange={(e) => setFormData({ ...formData, nomeVendedor: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-sm sm:text-base"
                 placeholder="Nome do contato"
               />
             </div>
@@ -136,22 +158,22 @@ export const SupplierForm: React.FC<SupplierFormProps> = ({ supplier, suppliers,
               type="text"
               value={formData.contatoVendedor}
               onChange={(e) => setFormData({ ...formData, contatoVendedor: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+              className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-sm sm:text-base"
               placeholder="Telefone ou Email"
             />
           </div>
 
-          <div className="pt-4 flex gap-3">
+          <div className="pt-4 flex flex-col sm:flex-row gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-6 py-3 rounded-xl border border-gray-200 font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+              className="flex-1 px-6 py-3 rounded-xl border border-gray-200 font-semibold text-gray-600 hover:bg-gray-50 transition-colors order-2 sm:order-1"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all"
+              className="flex-1 px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all order-1 sm:order-2"
             >
               Salvar
             </button>

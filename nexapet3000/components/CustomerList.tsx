@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Edit2, Trash2, Calendar, User, MapPin, Phone, Clock, CheckCircle, AlertCircle, History, MessageCircle, FileText, DollarSign, Dog, Copy, ExternalLink } from 'lucide-react';
+import { Edit2, Trash2, Calendar, User, MapPin, Phone, Clock, CheckCircle, AlertCircle, History, MessageCircle, FileText, DollarSign, Dog, Copy, ExternalLink, StickyNote } from 'lucide-react';
 import { format, isBefore, startOfDay, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CustomerData } from './CustomerForm';
@@ -9,21 +9,25 @@ import { CustomerData } from './CustomerForm';
 interface CustomerListProps {
   customers: CustomerData[];
   pendingBalances?: Record<string, number>;
+  inactivityData?: Record<string, { lastDate: Date | null; isInactive: boolean; hasNoPurchases: boolean }>;
   onEdit: (customer: CustomerData) => void;
   onDelete: (id: string) => void;
   onViewHistory?: (customer: CustomerData) => void;
   onViewOrderHistory?: (customer: CustomerData) => void;
   onAddCredit?: (customer: CustomerData) => void;
+  onViewNotes?: (customer: CustomerData) => void;
 }
 
 export const CustomerList: React.FC<CustomerListProps> = ({ 
   customers, 
   pendingBalances = {}, 
+  inactivityData = {},
   onEdit, 
   onDelete, 
   onViewHistory, 
   onViewOrderHistory,
-  onAddCredit
+  onAddCredit,
+  onViewNotes
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -110,10 +114,24 @@ export const CustomerList: React.FC<CustomerListProps> = ({
             key={customer.id} 
             className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-all group relative"
           >
-            {/* Status Badge */}
-            <div className={`absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest ${status.color}`}>
-              {status.icon}
-              {status.label}
+            {/* Status Badges */}
+            <div className="absolute top-4 right-4 flex flex-col items-end gap-2">
+              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest ${status.color}`}>
+                {status.icon}
+                {status.label}
+              </div>
+              
+              {inactivityData[customer.id!]?.hasNoPurchases ? (
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest bg-gray-100 text-gray-600 border-gray-200">
+                  <AlertCircle size={14} />
+                  Sem compras
+                </div>
+              ) : inactivityData[customer.id!]?.isInactive ? (
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest bg-orange-100 text-orange-600 border-orange-200">
+                  <Clock size={14} />
+                  Inativo
+                </div>
+              ) : null}
             </div>
 
             <div className="p-6">
@@ -348,6 +366,18 @@ export const CustomerList: React.FC<CustomerListProps> = ({
                       title="Lançar Crédito"
                     >
                       <DollarSign size={18} />
+                    </button>
+                  )}
+                  {onViewNotes && (
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onViewNotes(customer);
+                      }}
+                      className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-xl transition-all border border-transparent hover:border-indigo-100"
+                      title="Observações"
+                    >
+                      <StickyNote size={18} />
                     </button>
                   )}
                   <button 

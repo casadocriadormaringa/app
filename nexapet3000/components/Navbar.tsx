@@ -23,51 +23,68 @@ import {
 } from 'lucide-react';
 
 export const Navbar = () => {
+  console.log('Navbar: Renderizando...');
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [companyName, setCompanyName] = useState('Casa do Criador Maringá');
 
+  // Fecha o menu ao mudar de rota
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [pathname]);
+
   useEffect(() => {
     setMounted(true);
+    console.log('Navbar: Mounted, iniciando onSnapshot...');
+    
     const unsubConfig = onSnapshot(doc(db, 'config', 'empresa'), (docSnap) => {
+      console.log('Navbar: Snapshot recebido, existe:', docSnap.exists());
       if (docSnap.exists()) {
         setCompanyName(docSnap.data().nomeEmpresa || 'Casa do Criador Maringá');
       }
     });
-    return () => unsubConfig();
+
+    return () => {
+      unsubConfig();
+    };
   }, []);
 
   const mainNavItems = [
-    { href: '/', label: 'Clientes', icon: Users, color: 'indigo' },
-    { href: '/vendas', label: 'Vendas (PDV)', icon: ShoppingCart, color: 'violet' },
-    { href: '/entregas', label: 'Entregas', icon: DeliveryIcon, color: 'blue' },
-    { href: '/banhos-pets', label: 'Banhos Pets', icon: Dog, color: 'amber' },
-    { href: '/pedidos', label: 'Cobranças', icon: FileText, color: 'blue' },
+    { href: '/XJ92K4BT', label: 'Clientes', icon: Users, color: 'indigo' },
+    { href: '/XJ92K4BT/vendas', label: 'Vendas (PDV)', icon: ShoppingCart, color: 'violet' },
+    { href: '/XJ92K4BT/entregas', label: 'Entregas', icon: DeliveryIcon, color: 'blue' },
+    { href: '/XJ92K4BT/banhos-pets', label: 'Banhos Pets', icon: Dog, color: 'amber' },
+    { href: '/XJ92K4BT/pedidos', label: 'Cobranças', icon: FileText, color: 'blue' },
   ];
 
   const sideNavItems = [
-    { href: '/avisos', label: 'Avisos', icon: Bell, color: 'rose' },
-    { href: '/agenda', label: 'Agenda', icon: CalendarIcon, color: 'indigo' },
-    { href: '/banhos', label: 'Banhos', icon: Dog, color: 'amber' },
-    { href: '/produtos', label: 'Produtos', icon: Package, color: 'emerald' },
-    { href: '/relatorios', label: 'Relatórios', icon: TrendingUp, color: 'emerald' },
-    { href: '/admin/dados-atualizados', label: 'Dados Atualizados', icon: Users, color: 'rose' },
-    { href: '/gerencial', label: 'Gerencial', icon: Settings, color: 'blue' },
-    { href: '/cadeado', label: 'Cadeado', icon: Lock, color: 'indigo' },
+    { href: '/XJ92K4BT/nexapet', label: 'NexaPet', icon: Dog, color: 'orange' },
+    { href: '/XJ92K4BT/avisos', label: 'Avisos', icon: Bell, color: 'rose' },
+    { href: '/XJ92K4BT/agenda', label: 'Agenda', icon: CalendarIcon, color: 'indigo' },
+    { href: '/XJ92K4BT/banhos', label: 'Banhos', icon: Dog, color: 'amber' },
+    { href: '/XJ92K4BT/produtos', label: 'Produtos', icon: Package, color: 'emerald' },
+    { href: '/XJ92K4BT/relatorios', label: 'Relatórios', icon: TrendingUp, color: 'emerald' },
+    { href: '/XJ92K4BT/admin/dados-atualizados', label: 'Dados Atualizados', icon: Users, color: 'rose' },
+    { href: '/XJ92K4BT/gerencial', label: 'Gerencial', icon: Settings, color: 'blue' },
+    { href: '/XJ92K4BT/cadeado', label: 'Cadeado', icon: Lock, color: 'indigo' },
   ];
+
+  if (!mounted) return null;
 
   return (
     <>
       <header className="bg-white border-b border-gray-100 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <button 
-            onClick={() => setIsMenuOpen(true)}
-            className="mr-4 p-3 bg-gray-50 text-gray-600 rounded-xl hover:bg-gray-100 transition-all flex items-center gap-2 font-bold"
-          >
-            <Menu size={24} />
-            <span className="hidden sm:inline">Mais</span>
-          </button>
+          <div className="flex items-center">
+            <button 
+              onClick={() => setIsMenuOpen(true)}
+              className="mr-4 p-3 bg-gray-50 text-gray-600 rounded-xl hover:bg-gray-100 transition-all flex items-center gap-2 font-bold"
+            >
+              <Menu size={24} />
+              <span className="hidden sm:inline">Mais</span>
+            </button>
+          </div>
 
           <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto no-scrollbar py-2 flex-1">
             {mainNavItems.map((item) => {
@@ -98,6 +115,10 @@ export const Navbar = () => {
                 emerald: {
                   active: 'bg-emerald-600 text-white shadow-emerald-100',
                   inactive: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                },
+                orange: {
+                  active: 'bg-orange-600 text-white shadow-orange-100',
+                  inactive: 'bg-orange-50 text-orange-600 hover:bg-orange-100'
                 }
               };
 
@@ -127,7 +148,7 @@ export const Navbar = () => {
       {/* Version Label below header */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-1 flex justify-end">
         <span className="text-[10px] font-black text-gray-300 uppercase tracking-tighter">
-          Versão 11.1
+          Versão 15.2
         </span>
       </div>
 
@@ -181,6 +202,10 @@ export const Navbar = () => {
                 emerald: {
                   active: 'bg-emerald-600 text-white shadow-emerald-100',
                   inactive: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                },
+                orange: {
+                  active: 'bg-orange-600 text-white shadow-orange-100',
+                  inactive: 'bg-orange-50 text-orange-600 hover:bg-orange-100'
                 }
               };
 
@@ -212,7 +237,7 @@ export const Navbar = () => {
               {companyName}
             </p>
             <p className="text-center text-[10px] font-black text-gray-300 mt-1 uppercase tracking-tighter">
-              Versão 11.1
+              Versão 15.2
             </p>
           </div>
         </div>

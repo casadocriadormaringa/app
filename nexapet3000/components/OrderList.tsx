@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Edit2, Trash2, Calendar, User, Hash, Share2, MessageCircle, DollarSign, QrCode } from 'lucide-react';
+import { Edit2, Trash2, Calendar, User, Hash, Share2, MessageCircle, DollarSign, QrCode, FileCheck } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { OrderData } from '@/types/order';
@@ -15,9 +15,10 @@ interface OrderListProps {
   onDelete: (id: string) => void;
   onUpdateSentDate: (id: string, date: string) => void;
   onManualReceipt: (order: OrderData) => void;
+  onReceiptWhatsApp: (order: OrderData) => void;
 }
 
-export const OrderList: React.FC<OrderListProps> = ({ orders, onEdit, onDelete, onUpdateSentDate, onManualReceipt }) => {
+export const OrderList: React.FC<OrderListProps> = ({ orders, onEdit, onDelete, onUpdateSentDate, onManualReceipt, onReceiptWhatsApp }) => {
   const [companyConfig, setCompanyConfig] = useState<any>(null);
 
   useEffect(() => {
@@ -43,8 +44,9 @@ export const OrderList: React.FC<OrderListProps> = ({ orders, onEdit, onDelete, 
   };
 
   const handleShareWhatsApp = (order: OrderData) => {
+    const companyName = companyConfig?.nomeEmpresa || '';
     const message = `*Olá ${order.cliente_nome} , Segue os Valores Para Pagamento.*
-*## Fechamento Casa do Criador ##*
+*## Fechamento ${companyName} ##*
 
 *Total a Pagar: R$ ${order.valor_total}*
 
@@ -75,8 +77,9 @@ Cobrança Nº ${order.id || 'N/A'}`;
   };
 
   const handleSharePix = (order: OrderData) => {
+    const companyName = companyConfig?.nomeEmpresa || '';
     const message = `*Olá ${order.cliente_nome} , Segue os Valores Para Pagamento.*
-*## Fechamento Casa do Criador ##*
+*## Fechamento ${companyName} ##*
 
 *Total a Pagar: R$ ${order.valor_total}*
 
@@ -277,6 +280,18 @@ Cobrança Nº ${order.id || 'N/A'}`;
             </div>
 
             <div className="flex flex-wrap justify-end gap-1 sm:gap-2 pt-4 lg:pt-0 border-t lg:border-t-0 border-gray-50">
+              {order.status_pagamento?.toLowerCase() === 'pago' && (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReceiptWhatsApp(order);
+                  }}
+                  className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all border border-transparent hover:border-indigo-100"
+                  title="Gerar Recibo WhatsApp"
+                >
+                  <FileCheck size={18} />
+                </button>
+              )}
               {order.telefone_cliente && (
                 <button 
                   onClick={(e) => {

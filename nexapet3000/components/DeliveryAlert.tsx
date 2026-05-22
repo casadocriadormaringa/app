@@ -81,7 +81,7 @@ export const DeliveryAlert = () => {
     setNewDelivery(null);
   };
 
-  if (!mounted) return null;
+  // if (!mounted) return null;
 
   return (
     <AnimatePresence>

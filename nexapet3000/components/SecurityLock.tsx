@@ -9,15 +9,24 @@ interface SecurityLockProps {
   children: React.ReactNode;
 }
 
-export const SecurityLock: React.FC<SecurityLockProps> = ({ children }) => {
+export const SecurityLock: React.FC<SecurityLockProps & { bypass?: boolean }> = ({ children, bypass }) => {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [password, setPassword] = useState('');
   const [correctPassword, setCorrectPassword] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState('Casa do Criador');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+    
+    // Verificar se já foi desbloqueado nesta sessão
+    const sessionUnlocked = sessionStorage.getItem('admin_unlocked') === 'true';
+    if (sessionUnlocked) {
+      setIsUnlocked(true);
+    }
+
     const docRef = doc(db, 'config', 'empresa');
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -38,19 +47,23 @@ export const SecurityLock: React.FC<SecurityLockProps> = ({ children }) => {
     e.preventDefault();
     setError(false);
 
-    // Se não houver senha cadastrada, permite acesso (ou você pode exigir uma senha padrão)
     if (!correctPassword) {
       setIsUnlocked(true);
+      sessionStorage.setItem('admin_unlocked', 'true');
       return;
     }
 
     if (password === correctPassword) {
       setIsUnlocked(true);
+      sessionStorage.setItem('admin_unlocked', 'true');
     } else {
       setError(true);
       setPassword('');
     }
   };
+
+  if (!mounted) return null;
+  if (bypass) return <>{children}</>;
 
   if (loading) {
     return (
@@ -74,12 +87,13 @@ export const SecurityLock: React.FC<SecurityLockProps> = ({ children }) => {
       <h2 className="text-2xl font-black text-gray-900 mb-2">Acesso Restrito</h2>
       <p className="text-gray-500 font-medium mb-8">Esta área é protegida. Por favor, insira a senha de desbloqueio para continuar.</p>
 
-      <form onSubmit={handleUnlock} className="space-y-4">
+      <form onSubmit={handleUnlock} className="space-y-4" autoComplete="off">
         <div className="relative">
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
             className={`w-full px-6 py-4 bg-gray-50 rounded-2xl border-2 outline-none text-center text-xl font-black tracking-widest transition-all ${
               error ? 'border-red-500 bg-red-50 animate-shake' : 'border-transparent focus:border-indigo-500 focus:bg-white'
             }`}
