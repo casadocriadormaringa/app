@@ -26,9 +26,10 @@ import { SecurityLock } from '@/components/SecurityLock';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { Toast, ToastType } from '@/components/Toast';
-import { Search, Plus, Loader2, Package, ArrowLeft, Edit2, Trash2, Tag, Truck, Barcode, AlertTriangle, ExternalLink, FileText } from 'lucide-react';
+import { Search, Plus, Loader2, Package, ArrowLeft, Edit2, Trash2, Tag, Truck, Barcode, AlertTriangle, ExternalLink, FileText, Check, Printer } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { PurchaseOrderPrint } from '@/components/PurchaseOrderPrint';
+import { ShelfLabelsPrint } from '@/components/ShelfLabelsPrint';
 import { format } from 'date-fns';
 import Link from 'next/link';
 
@@ -65,6 +66,13 @@ function ProdutosContent() {
   const [supplierToDelete, setSupplierToDelete] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'PRODUTOS' | 'COMPRAS' | 'FORNECEDORES'>('PRODUTOS');
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [isLabelPrintModalOpen, setIsLabelPrintModalOpen] = useState(false);
+
+  const selectedProductsForLabels = useMemo(() => {
+    return products.filter(p => p.id && selectedProductIds.includes(p.id));
+  }, [products, selectedProductIds]);
 
   const showToast = useCallback((message: string, type: ToastType = 'success') => {
     setToast({ message, type });
@@ -394,7 +402,7 @@ function ProdutosContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
           {activeTab === 'PRODUTOS' ? (
             <>
-              <div className="relative mb-8">
+              <div className="relative mb-6">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                 <input
                   type="text"
@@ -405,6 +413,66 @@ function ProdutosContent() {
                 />
               </div>
 
+              {/* Barra de Seleção de Etiquetas de Gôndola */}
+              <div className="mb-6 bg-white py-3.5 px-4 sm:px-6 rounded-2xl border border-gray-150 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all col-span-full">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      const visibleIds = filteredProducts.map(p => p.id!).filter(Boolean);
+                      const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedProductIds.includes(id));
+                      
+                      if (allVisibleSelected) {
+                        setSelectedProductIds(prev => prev.filter(id => !visibleIds.includes(id)));
+                      } else {
+                        setSelectedProductIds(prev => {
+                          const combined = new Set([...prev, ...visibleIds]);
+                          return Array.from(combined);
+                        });
+                      }
+                    }}
+                    className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-gray-650 hover:text-indigo-650 transition-all select-none"
+                  >
+                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
+                      filteredProducts.length > 0 && filteredProducts.every(p => selectedProductIds.includes(p.id!))
+                        ? 'bg-indigo-600 border-indigo-600 text-white'
+                        : 'border-gray-300 bg-gray-50'
+                    }`}>
+                      {filteredProducts.length > 0 && filteredProducts.every(p => selectedProductIds.includes(p.id!)) && (
+                        <Check size={12} className="stroke-[3]" />
+                      )}
+                    </div>
+                    {filteredProducts.length > 0 && filteredProducts.every(p => selectedProductIds.includes(p.id!))
+                      ? 'Desmarcar Todos da Lista'
+                      : 'Selecionar Todos da Lista'}
+                  </button>
+
+                  <div className="h-4 w-px bg-gray-200 hidden sm:block" />
+                  
+                  <span className="text-xs text-gray-500 font-bold">
+                    {selectedProductIds.length} {selectedProductIds.length === 1 ? 'produto selecionado' : 'produtos selecionados'} para etiquetas
+                  </span>
+                </div>
+
+                {selectedProductIds.length > 0 && (
+                  <div className="flex items-center justify-end gap-2 shrink-0">
+                    <button
+                      onClick={() => setSelectedProductIds([])}
+                      className="text-xs font-bold text-gray-400 hover:text-red-500 px-3 py-2 rounded-xl hover:bg-red-50 transition-all select-none"
+                    >
+                      Limpar Seleção
+                    </button>
+                    
+                    <button
+                      onClick={() => setIsLabelPrintModalOpen(true)}
+                      className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-md shadow-indigo-100 select-none"
+                    >
+                      <Printer size={14} />
+                      Gerar Etiquetas ({selectedProductIds.length})
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <div className="flex flex-col gap-4">
                 {filteredProducts.map((product) => (
                   <div 
@@ -412,7 +480,31 @@ function ProdutosContent() {
                     className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group flex flex-col lg:flex-row lg:items-center justify-between gap-4"
                   >
                     {/* Informações Principais do Produto */}
-                    <div className="flex-1 min-w-0 flex items-start gap-4">
+                    <div className="flex-1 min-w-0 flex items-start gap-3 sm:gap-4">
+                      {/* Checkbox para seleção para etiquetas */}
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const id = product.id!;
+                          setSelectedProductIds(prev => 
+                            prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]
+                          );
+                        }}
+                        className={`mt-1.5 shrink-0 w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${
+                          selectedProductIds.includes(product.id!)
+                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                            : 'border-gray-200 hover:border-indigo-400 bg-gray-50'
+                        }`}
+                        title="Selecionar para etiqueta de gôndola"
+                      >
+                        {selectedProductIds.includes(product.id!) ? (
+                          <Check size={14} className="stroke-[3]" />
+                        ) : (
+                          <div className="w-1.5 h-1.5 rounded-full bg-transparent group-hover:bg-gray-300 transition-all" />
+                        )}
+                      </button>
+
                       <div className="hidden sm:flex bg-indigo-50 text-indigo-600 p-3 rounded-xl shrink-0 mt-1">
                         <Package size={22} />
                       </div>
@@ -761,6 +853,45 @@ function ProdutosContent() {
             message={toast.message} 
             type={toast.type} 
             onClose={() => setToast(null)} 
+          />
+        )}
+
+        {/* Floating Action Bar for Quick Label Print */}
+        {selectedProductIds.length > 0 && activeTab === 'PRODUTOS' && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[40] bg-[#1E293B] border border-gray-800 text-white px-4 py-3.5 sm:px-6 rounded-2xl shadow-2xl flex items-center gap-4 sm:gap-6 w-[92%] max-w-sm sm:max-w-md animate-in fade-in slide-in-from-bottom-4 duration-300 print:hidden">
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider">Etiquetas de Gôndola</span>
+              <span className="text-xs sm:text-sm font-extrabold text-white truncate">
+                {selectedProductIds.length} {selectedProductIds.length === 1 ? 'produto marcado' : 'produtos marcados'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 ml-auto shrink-0">
+              <button
+                onClick={() => setSelectedProductIds([])}
+                className="text-xs font-bold text-gray-400 hover:text-white px-2.5 py-1.5 rounded-xl hover:bg-slate-800 transition-all select-none"
+              >
+                Limpar
+              </button>
+              <button
+                onClick={() => setIsLabelPrintModalOpen(true)}
+                className="flex items-center gap-1.5 bg-indigo-650 hover:bg-indigo-600 active:scale-95 text-white text-xs font-black px-3.5 py-2.5 rounded-xl transition-all shadow-lg shadow-indigo-650/10 select-none"
+              >
+                <Printer size={13} />
+                Gerar ({selectedProductIds.length})
+              </button>
+            </div>
+          </div>
+        )}
+
+        {isLabelPrintModalOpen && (
+          <ShelfLabelsPrint
+            selectedProducts={selectedProductsForLabels}
+            onClose={() => setIsLabelPrintModalOpen(false)}
+            onPrintSuccess={() => {
+              setSelectedProductIds([]);
+              setIsLabelPrintModalOpen(false);
+              showToast('Etiquetas geradas! Seleção desmarcada com sucesso.', 'success');
+            }}
           />
         )}
       </div>
