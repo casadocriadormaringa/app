@@ -152,45 +152,87 @@ function ProdutosContent() {
 
   const handleSavePurchase = async (data: Omit<PurchaseData, 'id'>) => {
     try {
+      let isReceivingNow = false;
+      
       if (editingPurchase?.id) {
-        const ref = doc(db, 'compras', editingPurchase.id);
-        
-        // Se o status mudou para RECEBIDO, atualizar estoque
         if (data.status === 'RECEBIDO' && editingPurchase.status !== 'RECEBIDO') {
-          for (const item of data.itens) {
-            const productRef = doc(db, 'produtos', item.produtoId);
-            const product = products.find(p => p.id === item.produtoId);
-            if (product) {
-              try {
-                await updateDoc(productRef, {
-                  estoqueAtual: (product.estoqueAtual || 0) + (item.quantidadeRecebida || 0),
-                  precoCusto: item.precoCusto || product.precoCusto
-                });
-              } catch (err) {
-                handleFirestoreError(err, OperationType.UPDATE, `produtos/${item.produtoId}`);
-              }
+          isReceivingNow = true;
+        }
+      } else {
+        if (data.status === 'RECEBIDO') {
+          isReceivingNow = true;
+        }
+      }
+
+      if (isReceivingNow) {
+        // Atualizar estoque dos produtos correspondentes no Firestore
+        for (const item of data.itens) {
+          const productRef = doc(db, 'produtos', item.produtoId);
+          const product = products.find(p => p.id === item.produtoId);
+          if (product) {
+            try {
+              await updateDoc(productRef, {
+                estoqueAtual: (product.estoqueAtual || 0) + (item.quantidadeRecebida || 0),
+                precoCusto: item.precoCusto || product.precoCusto
+              });
+            } catch (err) {
+              handleFirestoreError(err, OperationType.UPDATE, `produtos/${item.produtoId}`);
             }
           }
-          showToast('Compra finalizada e estoque atualizado!');
-        } else {
-          showToast('Compra atualizada com sucesso!');
         }
-        
+
+        // Atualizar os produtos no estado local para que a UI reflita imediatamente
+        setProducts(prevProducts => prevProducts.map(p => {
+          const item = data.itens.find(i => i.produtoId === p.id);
+          if (item) {
+            return {
+              ...p,
+              estoqueAtual: (p.estoqueAtual || 0) + (item.quantidadeRecebida || 0),
+              precoCusto: item.precoCusto || p.precoCusto
+            };
+          }
+          return p;
+        }));
+      }
+
+      if (editingPurchase?.id) {
+        const ref = doc(db, 'compras', editingPurchase.id);
         try {
           await updateDoc(ref, data);
         } catch (err) {
           handleFirestoreError(err, OperationType.UPDATE, `compras/${editingPurchase.id}`);
         }
+        
+        // Atualizar compra no estado local
+        const updatedPurchase = { id: editingPurchase.id, ...data } as PurchaseData;
+        setPurchases(prevPurchases => prevPurchases.map(p => p.id === editingPurchase.id ? updatedPurchase : p));
+        
+        if (isReceivingNow) {
+          showToast('Compra finalizada e estoque atualizado!');
+        } else {
+          showToast('Compra atualizada com sucesso!');
+        }
       } else {
+        let newDocId = '';
         try {
-          await addDoc(collection(db, 'compras'), {
+          const docRef = await addDoc(collection(db, 'compras'), {
             ...data,
             createdAt: new Date().toISOString(),
           });
+          newDocId = docRef.id;
         } catch (err) {
           handleFirestoreError(err, OperationType.CREATE, 'compras');
         }
-        showToast('Pedido de compra registrado!');
+
+        // Adicionar nova compra ao estado local
+        const newPurchase = { id: newDocId, ...data, createdAt: new Date().toISOString() } as unknown as PurchaseData;
+        setPurchases(prevPurchases => [newPurchase, ...prevPurchases]);
+        
+        if (isReceivingNow) {
+          showToast('Compra finalizada e estoque atualizado!');
+        } else {
+          showToast('Pedido de compra registrado!');
+        }
       }
       setIsPurchaseModalOpen(false);
       setEditingPurchase(null);
@@ -218,16 +260,26 @@ function ProdutosContent() {
         } catch (err) {
           handleFirestoreError(err, OperationType.UPDATE, `produtos/${editingProduct.id}`);
         }
+        
+        // Atualizar produto no estado local
+        const updatedProduct = { id: editingProduct.id, ...data } as ProductData;
+        setProducts(prevProducts => prevProducts.map(p => p.id === editingProduct.id ? updatedProduct : p));
         showToast('Produto atualizado com sucesso!');
       } else {
+        let newDocId = '';
         try {
-          await addDoc(collection(db, 'produtos'), {
+          const docRef = await addDoc(collection(db, 'produtos'), {
             ...data,
             createdAt: new Date().toISOString(),
           });
+          newDocId = docRef.id;
         } catch (err) {
           handleFirestoreError(err, OperationType.CREATE, 'produtos');
         }
+        
+        // Adicionar produto ao estado local (com ordenação alfabética por nome)
+        const newProduct = { id: newDocId, ...data, createdAt: new Date().toISOString() } as ProductData;
+        setProducts(prevProducts => [...prevProducts, newProduct].sort((a, b) => a.nome.localeCompare(b.nome)));
         showToast('Produto cadastrado com sucesso!');
       }
       setIsFormOpen(false);
@@ -247,16 +299,26 @@ function ProdutosContent() {
         } catch (err) {
           handleFirestoreError(err, OperationType.UPDATE, `fornecedores/${editingSupplier.id}`);
         }
+        
+        // Atualizar fornecedor no estado local
+        const updatedSupplier = { id: editingSupplier.id, ...data } as SupplierData;
+        setSuppliers(prevSuppliers => prevSuppliers.map(s => s.id === editingSupplier.id ? updatedSupplier : s));
         showToast('Fornecedor atualizado com sucesso!');
       } else {
+        let newDocId = '';
         try {
-          await addDoc(collection(db, 'fornecedores'), {
+          const docRef = await addDoc(collection(db, 'fornecedores'), {
             ...data,
             createdAt: new Date().toISOString(),
           });
+          newDocId = docRef.id;
         } catch (err) {
           handleFirestoreError(err, OperationType.CREATE, 'fornecedores');
         }
+        
+        // Adicionar fornecedor ao estado local (ordenado por nome)
+        const newSupplier = { id: newDocId, ...data, createdAt: new Date().toISOString() } as SupplierData;
+        setSuppliers(prevSuppliers => [...prevSuppliers, newSupplier].sort((a, b) => a.nome.localeCompare(b.nome)));
         showToast('Fornecedor cadastrado com sucesso!');
       }
       setIsSupplierFormOpen(false);
@@ -275,6 +337,9 @@ function ProdutosContent() {
       } catch (err) {
         handleFirestoreError(err, OperationType.DELETE, `fornecedores/${supplierToDelete}`);
       }
+      
+      // Remover do estado local
+      setSuppliers(prevSuppliers => prevSuppliers.filter(s => s.id !== supplierToDelete));
       setSupplierToDelete(null);
       showToast('Fornecedor excluído com sucesso!');
     } catch (err) {
@@ -291,6 +356,9 @@ function ProdutosContent() {
       } catch (err) {
         handleFirestoreError(err, OperationType.DELETE, `produtos/${productToDelete}`);
       }
+      
+      // Remover do estado local
+      setProducts(prevProducts => prevProducts.filter(p => p.id !== productToDelete));
       setProductToDelete(null);
       showToast('Produto excluído com sucesso!');
     } catch (err) {
