@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { X, Printer, Check, Info, RefreshCw, Palette } from 'lucide-react';
 import { ProductData } from './ProductForm';
+import Link from 'next/link';
 
 interface ShelfLabelsPrintProps {
   selectedProducts: ProductData[];
@@ -35,8 +36,8 @@ export const ShelfLabelsPrint: React.FC<ShelfLabelsPrintProps> = ({
     }
   };
 
-  // Divide selected products into chunks of 24 (A4 Grid of 3x8)
-  const CHUNK_SIZE = 24;
+  // Divide selected products into chunks of 36 (A4 Grid of 4x9)
+  const CHUNK_SIZE = 36;
   const pages: ProductData[][] = [];
   for (let i = 0; i < selectedProducts.length; i += CHUNK_SIZE) {
     pages.push(selectedProducts.slice(i, i + CHUNK_SIZE));
@@ -55,7 +56,7 @@ export const ShelfLabelsPrint: React.FC<ShelfLabelsPrintProps> = ({
             <div>
               <h2 className="text-lg sm:text-xl font-black text-white">Gerar Etiquetas de Gôndola</h2>
               <p className="text-xs text-gray-400 font-medium mt-0.5">
-                Layout A4 inteligente (3x8 - 24 etiquetas por folha). Altura: 34mm | Largura: 64mm (Padrão Canaletas).
+                Layout A4 inteligente (4x9 - 36 etiquetas por folha). Altura: 30mm | Largura: 50mm (Padrão 3x5 cm).
               </p>
             </div>
           </div>
@@ -107,14 +108,27 @@ export const ShelfLabelsPrint: React.FC<ShelfLabelsPrintProps> = ({
               Linhas de Corte: {showMargins ? 'Sim' : 'Não'}
             </button>
 
-            {/* Print Button */}
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-bold hover:bg-indigo-500 transition-all active:scale-95 shadow-lg shadow-indigo-500/20 text-sm"
+            {/* Print Link styled as premium Button - Using Next.js Link inside same tab is 100% immune to iframe/sandbox popup blocks */}
+            <Link
+              href="/XJ92K4BT/produtos/imprimir"
+              onClick={() => {
+                try {
+                  localStorage.setItem('selectedProductsForLabels', JSON.stringify(selectedProducts));
+                  localStorage.setItem('labelTheme', theme);
+                  localStorage.setItem('labelShowMargins', String(showMargins));
+                } catch (e) {
+                  console.error('Failed to save to localStorage:', e);
+                }
+                // Automatically deselect on parent state
+                setTimeout(() => {
+                  onPrintSuccess();
+                }, 1000);
+              }}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl font-bold transition-all active:scale-95 shadow-lg shadow-indigo-500/20 text-sm select-none"
             >
               <Printer size={18} />
               Imprimir Etiquetas
-            </button>
+            </Link>
             
             {/* Close Button */}
             <button
@@ -149,54 +163,62 @@ export const ShelfLabelsPrint: React.FC<ShelfLabelsPrintProps> = ({
               style={{
                 width: '210mm',
                 height: '297mm',
-                padding: '8mm 10mm',
+                padding: '13.5mm 5mm',
                 margin: '0 auto',
                 boxSizing: 'border-box',
                 pageBreakAfter: 'always'
               }}
             >
               {/* Labels Grid */}
-              <div className="grid grid-cols-3 w-full h-full text-black">
+              <div 
+                className="grid w-full h-full text-black"
+                style={{
+                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  gridTemplateRows: 'repeat(9, 1fr)',
+                  alignItems: 'stretch',
+                  justifyItems: 'stretch'
+                }}
+              >
                 {chunk.map((product) => {
                   return (
                     <div
                       key={product.id}
-                      className={`relative flex flex-col justify-between overflow-hidden bg-white p-2.5 transition-all`}
+                      className="relative flex flex-col justify-between overflow-hidden bg-white p-2 transition-all"
                       style={{
-                        width: '63mm',
-                        height: '34mm',
+                        width: '50mm',
+                        height: '30mm',
                         border: showMargins ? '1px dashed #d1d5db' : '1px solid transparent',
                         boxSizing: 'border-box'
                       }}
                     >
                       {/* Brand/Store Indicator & Code */}
-                      <div className="flex justify-between items-center text-[10px] uppercase font-bold text-gray-500 pb-1 border-b border-gray-100">
-                        <span className="truncate max-w-[80px]">PRODUTO</span>
-                        <span className="shrink-0 bg-gray-100 text-gray-600 px-1 py-0.5 rounded leading-none text-[8px] font-mono tracking-wider">
+                      <div className="flex justify-between items-center text-[8.5px] uppercase font-bold text-gray-500 pb-0.5 border-b border-gray-100">
+                        <span className="truncate max-w-[60px] tracking-wide">PRODUTO</span>
+                        <span className="shrink-0 bg-gray-100 text-gray-600 px-1 py-0.5 rounded leading-none text-[7.5px] font-mono tracking-wider">
                           COD: {product.codigo}
                         </span>
                       </div>
 
                       {/* Product Name */}
-                      <div className="flex-1 my-1 flex flex-col justify-center">
-                        <h4 className="text-xs sm:text-[13px] font-black leading-[1.2] text-gray-900 tracking-tight line-clamp-2">
+                      <div className="flex-1 my-0.5 flex flex-col justify-center">
+                        <h4 className="text-[10px] sm:text-[10.5px] font-black leading-[1.2] text-gray-900 tracking-tight line-clamp-2 uppercase">
                           {product.nome}
                         </h4>
                         {product.codigoBarras && (
-                          <span className="text-[7.5px] text-gray-450 font-mono mt-0.5">
+                          <span className="text-[6.5px] text-gray-450 font-mono mt-0.5 leading-none">
                             EAN: {product.codigoBarras}
                           </span>
                         )}
                       </div>
 
                       {/* Pricing Tag container */}
-                      <div className="flex items-end justify-between pt-1 border-t border-gray-50 mt-auto">
-                        <div className="text-[7px] text-gray-400 italic leading-tight self-end pb-0.5 font-medium">
-                          Preço final à vista
+                      <div className="flex items-end justify-between pt-0.5 border-t border-gray-50 mt-auto">
+                        <div className="text-[6.5px] text-gray-400 italic leading-tight self-end pb-0.5 font-medium">
+                          À vista
                         </div>
                         
                         <div className="text-right flex items-baseline gap-0.5 shrink-0 select-none">
-                          <span className={`text-[10px] font-black uppercase ${
+                          <span className={`text-[8.5px] font-black uppercase ${
                             theme === 'retail' ? 'text-red-650' : theme === 'modern' ? 'text-indigo-600' : 'text-black'
                           }`}>
                             R$
@@ -208,12 +230,12 @@ export const ShelfLabelsPrint: React.FC<ShelfLabelsPrintProps> = ({
                             const parts = val.toFixed(2).split('.');
                             return (
                               <div className="inline-flex items-baseline font-black leading-none shrink-0 select-none">
-                                <span className={`text-2xl sm:text-[27px] font-extrabold tracking-tighter ${
+                                <span className={`text-[21px] font-extrabold tracking-tighter ${
                                   theme === 'retail' ? 'text-red-655' : theme === 'modern' ? 'text-indigo-650' : 'text-black'
                                 }`}>
                                   {parts[0]}
                                 </span>
-                                <span className={`text-sm sm:text-[15px] font-extrabold tracking-tighter ml-0.5 ${
+                                <span className={`text-[12.5px] font-extrabold tracking-tighter ml-0.5 ${
                                   theme === 'retail' ? 'text-red-655' : theme === 'modern' ? 'text-indigo-650' : 'text-black'
                                 }`}>
                                   ,{parts[1]}
