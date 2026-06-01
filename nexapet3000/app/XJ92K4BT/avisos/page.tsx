@@ -115,20 +115,19 @@ export default function AvisosPage() {
                 if (v.proxima_dose && !v.concluido) {
                   try {
                     const proxima = startOfDay(parseISO(v.proxima_dose));
-                    if (isBefore(proxima, today)) {
-                      newAvisos.push({
-                        id: `vac-${clienteId}-${pet.id}-${idx}`,
-                        tipo: 'VACINA_VENCIDA',
-                        titulo: `Vacina Vencida: ${pet.nome} (${data.nome})`,
-                        subtitulo: `${v.nome} - Próxima dose era em ${format(proxima, 'dd/MM/yyyy', { locale: ptBR })}`,
-                        data: v.proxima_dose,
-                        contato: data.telefone,
-                        entidadeId: clienteId,
-                        clienteId: clienteId,
-                        petId: pet.id,
-                        itemIndex: idx
-                      });
-                    }
+                    const isExpired = isBefore(proxima, today);
+                    newAvisos.push({
+                      id: `vac-${clienteId}-${pet.id}-${idx}`,
+                      tipo: 'VACINA_VENCIDA',
+                      titulo: `${isExpired ? 'Vacina Vencida' : 'Próxima Vacina'}: ${pet.nome} (${data.nome})`,
+                      subtitulo: `${v.nome} - ${isExpired ? 'Próxima dose era em' : 'Próxima dose em'} ${format(proxima, 'dd/MM/yyyy', { locale: ptBR })}`,
+                      data: v.proxima_dose,
+                      contato: data.telefone,
+                      entidadeId: clienteId,
+                      clienteId: clienteId,
+                      petId: pet.id,
+                      itemIndex: idx
+                    });
                   } catch (e) {}
                 }
               });
@@ -138,20 +137,19 @@ export default function AvisosPage() {
                 if (v.proxima_dose && !v.concluido) {
                   try {
                     const proxima = startOfDay(parseISO(v.proxima_dose));
-                    if (isBefore(proxima, today)) {
-                      newAvisos.push({
-                        id: `ver-${clienteId}-${pet.id}-${idx}`,
-                        tipo: 'VERMIFUGO_VENCIDO',
-                        titulo: `Vermífugo Vencido: ${pet.nome} (${data.nome})`,
-                        subtitulo: `${v.nome} - Próxima dose era em ${format(proxima, 'dd/MM/yyyy', { locale: ptBR })}`,
-                        data: v.proxima_dose,
-                        contato: data.telefone,
-                        entidadeId: clienteId,
-                        clienteId: clienteId,
-                        petId: pet.id,
-                        itemIndex: idx
-                      });
-                    }
+                    const isExpired = isBefore(proxima, today);
+                    newAvisos.push({
+                      id: `ver-${clienteId}-${pet.id}-${idx}`,
+                      tipo: 'VERMIFUGO_VENCIDO',
+                      titulo: `${isExpired ? 'Vermífugo Vencido' : 'Próximo Vermífugo'}: ${pet.nome} (${data.nome})`,
+                      subtitulo: `${v.nome} - ${isExpired ? 'Próxima dose era em' : 'Próxima dose em'} ${format(proxima, 'dd/MM/yyyy', { locale: ptBR })}`,
+                      data: v.proxima_dose,
+                      contato: data.telefone,
+                      entidadeId: clienteId,
+                      clienteId: clienteId,
+                      petId: pet.id,
+                      itemIndex: idx
+                    });
                   } catch (e) {}
                 }
               });
@@ -551,7 +549,7 @@ export default function AvisosPage() {
               <p className="text-2xl font-black text-indigo-900">
                 {allAvisos.filter(a => a.tipo === 'VACINA_VENCIDA').length}
               </p>
-              <p className="text-xs text-indigo-600 font-bold uppercase mt-1">Vencidas</p>
+              <p className="text-xs text-indigo-600 font-bold uppercase mt-1">Pendentes</p>
             </div>
 
             <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
@@ -562,7 +560,7 @@ export default function AvisosPage() {
               <p className="text-2xl font-black text-emerald-900">
                 {allAvisos.filter(a => a.tipo === 'VERMIFUGO_VENCIDO').length}
               </p>
-              <p className="text-xs text-emerald-600 font-bold uppercase mt-1">Vencidos</p>
+              <p className="text-xs text-emerald-600 font-bold uppercase mt-1">Pendentes</p>
             </div>
 
             <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
