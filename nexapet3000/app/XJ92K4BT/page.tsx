@@ -231,7 +231,7 @@ function ClientesContent() {
     today.setHours(0, 0, 0, 0);
 
     customers.forEach(customer => {
-      let lastDate: Date | null = null;
+      let lastDate: any = null;
 
       // Check orders
       const customerOrders = pendingOrders.filter(o => {

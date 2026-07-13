@@ -49,7 +49,9 @@ export function PurchaseModal({ purchase, products, suppliers, onSave, onClose }
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSupplierId, setSelectedSupplierId] = useState(purchase?.fornecedorId || '');
   const [itens, setItens] = useState<PurchaseItem[]>(purchase?.itens || []);
-  const [status, setStatus] = useState<'ABERTO' | 'RECEBIDO' | 'CANCELADO'>(purchase?.status || 'ABERTO');
+  const [status, setStatus] = useState<'ABERTO' | 'RECEBIDO' | 'CANCELADO'>(
+    purchase?.status === 'ABERTO' ? 'RECEBIDO' : (purchase?.status || 'ABERTO')
+  );
   const [numeroNF, setNumeroNF] = useState(purchase?.numeroNF || '');
   const [formaPagamento, setFormaPagamento] = useState(purchase?.formaPagamento || '');
   const [vencimentos, setVencimentos] = useState<Installment[]>(purchase?.vencimentos || []);
@@ -105,12 +107,20 @@ export function PurchaseModal({ purchase, products, suppliers, onSave, onClose }
     setLoading(true);
     try {
       const supplier = suppliers.find(s => s.id === selectedSupplierId);
+      const processedItens = status === 'RECEBIDO'
+        ? itens.map(item => ({
+            ...item,
+            quantidadeRecebida: item.quantidadeRecebida === 0 ? item.quantidadePedida : item.quantidadeRecebida,
+            recebido: item.quantidadeRecebida === 0 ? true : item.recebido
+          }))
+        : itens;
+
       const purchaseData: Omit<PurchaseData, 'id'> = {
         dataPedido: purchase?.dataPedido || new Date().toISOString(),
         status,
         fornecedorId: selectedSupplierId,
         fornecedorNome: supplier?.nome || '',
-        itens,
+        itens: processedItens,
         valorTotal: total,
         createdAt: purchase?.createdAt || new Date().toISOString(),
         numeroNF,

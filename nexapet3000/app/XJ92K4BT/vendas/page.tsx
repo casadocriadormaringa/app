@@ -260,6 +260,32 @@ function VendasContent() {
     }));
   };
 
+  const handleSelectSemCadastro = () => {
+    const found = customers.find(c => 
+      c.nome.toUpperCase().includes('CLIENTE SEM CADASTRO') || 
+      c.nome.toUpperCase().includes('SEM CADASTRO')
+    );
+    if (found) {
+      setSelectedCustomer(found);
+      setSearchTerm(found.nome);
+      setIsManualCustomer(false);
+      showToast('Cliente "CLIENTE SEM CADASTRO" selecionado!');
+    } else {
+      const fallback: CustomerData = {
+        id: 'CLIENTE_SEM_CADASTRO_ID',
+        nome: 'CLIENTE SEM CADASTRO',
+        codigo: '0',
+        telefone: '',
+        endereco: '',
+        pets: []
+      } as any;
+      setSelectedCustomer(fallback);
+      setSearchTerm('CLIENTE SEM CADASTRO');
+      setIsManualCustomer(false);
+      showToast('Cliente "CLIENTE SEM CADASTRO" selecionado!');
+    }
+  };
+
   const filteredCustomers = useMemo(() => {
     if (!searchTerm) return [];
     const term = searchTerm.toLowerCase();
@@ -757,42 +783,62 @@ function VendasContent() {
                     </div>
                   </div>
                 ) : !selectedCustomer ? (
-                  <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                    <input
-                      type="text"
-                      placeholder="Buscar por nome, código ou telefone..."
-                      value={searchTerm}
-                      onChange={(e) => {
-                        setSearchTerm(e.target.value);
-                        setShowCustomerResults(true);
-                      }}
-                      onFocus={() => setShowCustomerResults(true)}
-                      className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                    />
-                    {showCustomerResults && searchTerm && (
-                      <div className="absolute z-20 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden">
-                        {filteredCustomers.map(c => (
-                          <button
-                            key={c.id}
-                            onClick={() => {
-                              setSelectedCustomer(c);
-                              setShowCustomerResults(false);
-                            }}
-                            className="w-full px-6 py-4 text-left hover:bg-indigo-50 flex items-center justify-between group"
-                          >
-                            <div>
-                              <p className="font-bold text-gray-900 group-hover:text-indigo-600">#{c.codigo} - {c.nome}</p>
-                              <p className="text-sm text-gray-500">{c.telefone}</p>
-                            </div>
-                            <ChevronRight size={18} className="text-gray-300 group-hover:text-indigo-400" />
-                          </button>
-                        ))}
-                        {filteredCustomers.length === 0 && (
-                          <div className="px-6 py-4 text-gray-500 italic">Nenhum cliente encontrado</div>
-                        )}
-                      </div>
-                    )}
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                      <input
+                        type="text"
+                        placeholder="Buscar por nome, código ou telefone..."
+                        value={searchTerm}
+                        onChange={(e) => {
+                          setSearchTerm(e.target.value);
+                          setShowCustomerResults(true);
+                        }}
+                        onFocus={() => setShowCustomerResults(true)}
+                        className="w-full pl-12 pr-44 py-4 bg-gray-50 rounded-2xl border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSelectSemCadastro}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
+                        title="Vincular venda a um cliente sem cadastro"
+                      >
+                        <UserPlus size={14} />
+                        <span>Sem Cadastro</span>
+                      </button>
+                      {showCustomerResults && searchTerm && (
+                        <div className="absolute z-20 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden">
+                          {filteredCustomers.map(c => (
+                            <button
+                              key={c.id}
+                              onClick={() => {
+                                setSelectedCustomer(c);
+                                setShowCustomerResults(false);
+                              }}
+                              className="w-full px-6 py-4 text-left hover:bg-indigo-50 flex items-center justify-between group"
+                            >
+                              <div>
+                                <p className="font-bold text-gray-900 group-hover:text-indigo-600">#{c.codigo} - {c.nome}</p>
+                                <p className="text-sm text-gray-500">{c.telefone}</p>
+                              </div>
+                              <ChevronRight size={18} className="text-gray-300 group-hover:text-indigo-400" />
+                            </button>
+                          ))}
+                          {filteredCustomers.length === 0 && (
+                            <div className="px-6 py-4 text-gray-500 italic">Nenhum cliente encontrado</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex justify-start">
+                      <button
+                        type="button"
+                        onClick={handleSelectSemCadastro}
+                        className="px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border border-indigo-100 shadow-sm"
+                      >
+                        <UserPlus size={14} /> Usar "CLIENTE SEM CADASTRO"
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
@@ -1073,18 +1119,32 @@ function VendasContent() {
                   {/* Payment Method */}
                   <div className="space-y-2">
                     <label className="text-xs font-bold uppercase tracking-wider text-gray-400">Forma de Pagamento</label>
-                    <select 
-                      value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-full px-4 py-3 bg-gray-50 rounded-2xl border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-gray-700 transition-all"
-                    >
-                      <option value="DINHEIRO">Dinheiro</option>
-                      <option value="PIX">PIX</option>
-                      <option value="C_CREDITO">Cartão de Crédito</option>
-                      <option value="C_DEBITO">Cartão de Débito</option>
-                      <option value="A_PRAZO">Venda a Prazo</option>
-                      <option value="A_COMBINAR">A Combinar</option>
-                    </select>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { value: 'DINHEIRO', label: 'Dinheiro', icon: <DollarSign size={16} /> },
+                        { value: 'PIX', label: 'PIX', icon: <CreditCard size={16} /> },
+                        { value: 'C_CREDITO', label: 'C. Crédito', icon: <CreditCard size={16} /> },
+                        { value: 'C_DEBITO', label: 'C. Débito', icon: <CreditCard size={16} /> },
+                        { value: 'A_PRAZO', label: 'A Prazo', icon: <Clock size={16} /> },
+                        { value: 'A_COMBINAR', label: 'A Combinar', icon: <CalendarIcon size={16} /> },
+                      ].map((item) => (
+                        <button
+                          key={item.value}
+                          type="button"
+                          onClick={() => setPaymentMethod(item.value)}
+                          className={`flex items-center gap-2 px-4 py-3 rounded-2xl font-bold text-sm transition-all border-2 text-left ${
+                            paymentMethod === item.value
+                              ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-sm'
+                              : 'bg-gray-50 border-transparent text-gray-500 hover:bg-gray-100'
+                          }`}
+                        >
+                          <span className={`${paymentMethod === item.value ? 'text-indigo-600' : 'text-gray-400'}`}>
+                            {item.icon}
+                          </span>
+                          <span>{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Payment Status Selection */}

@@ -6,9 +6,9 @@ import { format } from 'date-fns';
 import { PurchaseData } from './PurchaseModal';
 
 interface CompanyConfig {
-  nomeEmpresa: string;
+  nomeEmpresa?: string;
   cnpjCpf?: string;
-  telefoneEmpresa: string;
+  telefoneEmpresa?: string;
   enderecoRua?: string;
   enderecoNumero?: string;
   enderecoBairro?: string;

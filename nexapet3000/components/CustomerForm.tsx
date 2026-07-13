@@ -94,8 +94,8 @@ export interface Pet {
   valor_banho_avulso: number;
   banho_e_tosa: 'Sim' | 'Não';
   proximo_banho?: string;
-  vacinas?: { nome: string; data: string; proxima_dose: string }[];
-  vermifugos?: { nome: string; data: string; proxima_dose: string }[];
+  vacinas?: { nome: string; data: string; proxima_dose: string; concluido?: boolean; data_conclusao?: string }[];
+  vermifugos?: { nome: string; data: string; proxima_dose: string; concluido?: boolean; data_conclusao?: string }[];
   status_banho?: 'pendente' | 'em_rota' | 'ok';
 }
 

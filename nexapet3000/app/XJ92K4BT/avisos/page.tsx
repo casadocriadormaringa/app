@@ -26,12 +26,54 @@ import { ptBR } from 'date-fns/locale';
 import { OrderHistoryModal } from '@/components/OrderHistoryModal';
 import { CustomerData } from '@/components/CustomerForm';
 
+function parseDateString(dateStr: string): Date | null {
+  if (!dateStr) return null;
+  const cleaned = dateStr.trim();
+  if (cleaned.includes('/')) {
+    const parts = cleaned.split('/');
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+      const date = new Date(year, month, day);
+      if (!isNaN(date.getTime())) return date;
+    }
+  }
+  if (cleaned.includes('-')) {
+    const parts = cleaned.split('-');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        const date = new Date(year, month, day);
+        if (!isNaN(date.getTime())) return date;
+      } else {
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const year = parseInt(parts[2], 10);
+        const date = new Date(year, month, day);
+        if (!isNaN(date.getTime())) return date;
+      }
+    }
+  }
+  try {
+    const d = parseISO(cleaned);
+    if (!isNaN(d.getTime())) return d;
+  } catch (e) {}
+  try {
+    const d = new Date(cleaned);
+    if (!isNaN(d.getTime())) return d;
+  } catch (e) {}
+  return null;
+}
+
 interface Pet {
   id: string;
   nome: string;
   raca: string;
-  vacinas?: { nome: string; data: string; proxima_dose: string }[];
-  vermifugos?: { nome: string; data: string; proxima_dose: string }[];
+  vacinas?: { nome: string; data: string; proxima_dose: string; concluido?: boolean; data_conclusao?: string }[];
+  vermifugos?: { nome: string; data: string; proxima_dose: string; concluido?: boolean; data_conclusao?: string }[];
 }
 
 interface Cliente {
@@ -49,6 +91,8 @@ interface Pedido {
   valor_total: number;
   status_pagamento: string;
   data_cobranca: string;
+  createdAt?: string;
+  cliente_id?: string;
 }
 
 interface AvisoItem {
@@ -92,64 +136,73 @@ export default function AvisosPage() {
 
         if (data.data_vencimento) {
           try {
-            const vencimento = startOfDay(parseISO(data.data_vencimento));
-            if (isBefore(vencimento, today)) {
-              newAvisos.push({
-                id: `venc-${clienteId}`,
-                tipo: 'CLIENTE_VENCIDO',
-                titulo: `Pacote Vencido: ${data.nome}`,
-                subtitulo: `Vencimento em ${format(vencimento, 'dd/MM/yyyy', { locale: ptBR })}`,
-                data: data.data_vencimento,
-                contato: data.telefone,
-                entidadeId: clienteId,
-                clienteId: clienteId
-              });
+            const parsed = parseDateString(data.data_vencimento);
+            if (parsed) {
+              const vencimento = startOfDay(parsed);
+              if (isBefore(vencimento, today)) {
+                newAvisos.push({
+                  id: `venc-${clienteId}`,
+                  tipo: 'CLIENTE_VENCIDO',
+                  titulo: `Pacote Vencido: ${data.nome}`,
+                  subtitulo: `Vencimento em ${format(vencimento, 'dd/MM/yyyy', { locale: ptBR })}`,
+                  data: data.data_vencimento,
+                  contato: data.telefone,
+                  entidadeId: clienteId,
+                  clienteId: clienteId
+                });
+              }
             }
           } catch (e) {}
         }
 
         if (data.pets && Array.isArray(data.pets)) {
-          data.pets.forEach(pet => {
+          data.pets.forEach((pet: any) => {
             if (pet.vacinas && Array.isArray(pet.vacinas)) {
-              pet.vacinas.forEach((v, idx) => {
+              pet.vacinas.forEach((v: any, idx: number) => {
                 if (v.proxima_dose && !v.concluido) {
                   try {
-                    const proxima = startOfDay(parseISO(v.proxima_dose));
-                    const isExpired = isBefore(proxima, today);
-                    newAvisos.push({
-                      id: `vac-${clienteId}-${pet.id}-${idx}`,
-                      tipo: 'VACINA_VENCIDA',
-                      titulo: `${isExpired ? 'Vacina Vencida' : 'Próxima Vacina'}: ${pet.nome} (${data.nome})`,
-                      subtitulo: `${v.nome} - ${isExpired ? 'Próxima dose era em' : 'Próxima dose em'} ${format(proxima, 'dd/MM/yyyy', { locale: ptBR })}`,
-                      data: v.proxima_dose,
-                      contato: data.telefone,
-                      entidadeId: clienteId,
-                      clienteId: clienteId,
-                      petId: pet.id,
-                      itemIndex: idx
-                    });
+                    const parsed = parseDateString(v.proxima_dose);
+                    if (parsed) {
+                      const proxima = startOfDay(parsed);
+                      const isExpired = isBefore(proxima, today);
+                      newAvisos.push({
+                        id: `vac-${clienteId}-${pet.id}-${idx}`,
+                        tipo: 'VACINA_VENCIDA',
+                        titulo: `${isExpired ? 'Vacina Vencida' : 'Próxima Vacina'}: ${pet.nome} (${data.nome})`,
+                        subtitulo: `${v.nome} - ${isExpired ? 'Próxima dose era em' : 'Próxima dose em'} ${format(proxima, 'dd/MM/yyyy', { locale: ptBR })}`,
+                        data: v.proxima_dose,
+                        contato: data.telefone,
+                        entidadeId: clienteId,
+                        clienteId: clienteId,
+                        petId: pet.id,
+                        itemIndex: idx
+                      });
+                    }
                   } catch (e) {}
                 }
               });
             }
             if (pet.vermifugos && Array.isArray(pet.vermifugos)) {
-              pet.vermifugos.forEach((v, idx) => {
+              pet.vermifugos.forEach((v: any, idx: number) => {
                 if (v.proxima_dose && !v.concluido) {
                   try {
-                    const proxima = startOfDay(parseISO(v.proxima_dose));
-                    const isExpired = isBefore(proxima, today);
-                    newAvisos.push({
-                      id: `ver-${clienteId}-${pet.id}-${idx}`,
-                      tipo: 'VERMIFUGO_VENCIDO',
-                      titulo: `${isExpired ? 'Vermífugo Vencido' : 'Próximo Vermífugo'}: ${pet.nome} (${data.nome})`,
-                      subtitulo: `${v.nome} - ${isExpired ? 'Próxima dose era em' : 'Próxima dose em'} ${format(proxima, 'dd/MM/yyyy', { locale: ptBR })}`,
-                      data: v.proxima_dose,
-                      contato: data.telefone,
-                      entidadeId: clienteId,
-                      clienteId: clienteId,
-                      petId: pet.id,
-                      itemIndex: idx
-                    });
+                    const parsed = parseDateString(v.proxima_dose);
+                    if (parsed) {
+                      const proxima = startOfDay(parsed);
+                      const isExpired = isBefore(proxima, today);
+                      newAvisos.push({
+                        id: `ver-${clienteId}-${pet.id}-${idx}`,
+                        tipo: 'VERMIFUGO_VENCIDO',
+                        titulo: `${isExpired ? 'Vermífugo Vencido' : 'Próximo Vermífugo'}: ${pet.nome} (${data.nome})`,
+                        subtitulo: `${v.nome} - ${isExpired ? 'Próxima dose era em' : 'Próxima dose em'} ${format(proxima, 'dd/MM/yyyy', { locale: ptBR })}`,
+                        data: v.proxima_dose,
+                        contato: data.telefone,
+                        entidadeId: clienteId,
+                        clienteId: clienteId,
+                        petId: pet.id,
+                        itemIndex: idx
+                      });
+                    }
                   } catch (e) {}
                 }
               });
@@ -217,7 +270,9 @@ export default function AvisosPage() {
       if (!vencimentoStr) return;
 
       try {
-        const vencimento = startOfDay(parseISO(vencimentoStr));
+        const parsed = parseDateString(vencimentoStr);
+        if (!parsed) return;
+        const vencimento = startOfDay(parsed);
         if (isBefore(vencimento, today)) {
           const clienteId = data.clienteId;
           if (!clienteId) return;
@@ -267,8 +322,11 @@ export default function AvisosPage() {
         // Se for uma venda a prazo vencida, ela será tratada pelo vendasAvisos (agrupada)
         if (data.dataVencimento) {
           try {
-            const vencimento = startOfDay(parseISO(data.dataVencimento));
-            if (isBefore(vencimento, today)) return null;
+            const parsed = parseDateString(data.dataVencimento);
+            if (parsed) {
+              const vencimento = startOfDay(parsed);
+              if (isBefore(vencimento, today)) return null;
+            }
           } catch (e) {}
         }
 
@@ -298,7 +356,7 @@ export default function AvisosPage() {
     return allAvisos.filter(aviso => {
       const matchesSearch = 
         aviso.titulo.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        aviso.entidadeId.toLowerCase().includes(searchTerm.toLowerCase());
+        String(aviso.entidadeId || '').toLowerCase().includes(searchTerm.toLowerCase());
 
       if (!matchesSearch) return false;
 
